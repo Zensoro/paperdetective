@@ -1,0 +1,2 @@
+# PaperDetective development dependencies
+pytest>=7.0

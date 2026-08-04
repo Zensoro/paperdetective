@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paperdetective"
+version = "0.1.0"
+description = "PaperDetective 学术打假检测器 — open-source pipeline that detects data fabrication, image manipulation, citation fraud, retraction flags, internal inconsistency, and cross-paper duplication in academic papers, with a strict JSON report."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "PaperDetective Contributors" }]
+keywords = ["academic-integrity", "fraud-detection", "grim", "benford", "llm", "paper-mill", "打假", "学术诚信", "数据造假"]
+dependencies = [
+    "pydantic>=2.5",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "Pillow>=9.5",
+]
+
+[project.optional-dependencies]
+llm = ["openai>=1.0"]
+pdf = ["pypdf>=4.0"]
+docx = ["python-docx>=1.0"]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/Zensoro/paperdetective"
+Repository = "https://github.com/Zensoro/paperdetective"
+Issues = "https://github.com/Zensoro/paperdetective/issues"
+Changelog = "https://github.com/Zensoro/paperdetective/blob/main/CHANGELOG.md"
+
+[project.scripts]
+paperdetective = "paperdetective.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["paperdetective*"]
+
+[tool.setuptools.package-data]
+paperdetective = ["prompts/*.md", "examples/*.json", "examples/gold/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["error::DeprecationWarning:paperdetective.*"]
