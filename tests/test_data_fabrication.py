@@ -5,27 +5,39 @@ from paperdetective.detect.data_fabrication import (
 )
 
 
-def test_grim_passes_near_zero_remainder():
-    # mean=1.33 with n=2: 1.33*2=2.66=266*0.01 => possible, despite 2.66 % 0.01
-    # rounding to ~8.7e-17 (near-zero) instead of exactly 0.0 in float arithmetic
-    r = grim_test(mean=1.33, n=2, granularity=0.01)
+def test_grim_passes_consistent_mean():
+    # mean=1.33 with n=3: 总分 4 -> 4/3=1.3333 四舍五入到两位即 1.33 => 合法
+    r = grim_test(mean=1.33, n=3, granularity=0.01)
     assert r["grim_passed"] is True
     assert r["violated"] is False
 
 
 def test_grim_catches_impossible_mean():
-    # mean=1.333 with n=2: 1.333*2=2.666, not an integer multiple of 0.01
-    # (three decimals vs granularity's two) => impossible
+    # mean=2.66 with n=2: 可能的总分只有整数 5 或 6 -> 2.5 或 3.0，
+    # 无论怎么舍入都得不到 2.66 => 不可能
+    r = grim_test(mean=2.66, n=2, granularity=0.01)
+    assert r["grim_passed"] is False
+    assert r["violated"] is True
+
+
+def test_grim_catches_three_decimal_mean_with_small_n():
+    # mean=1.333 with n=2: 3/2=1.5，与 1.333 的差距远超舍入窗口 => 不可能
     r = grim_test(mean=1.333, n=2, granularity=0.01)
     assert r["grim_passed"] is False
     assert r["violated"] is True
 
 
 def test_grim_passes_possible_mean():
-    # mean=1.335 with n=2, granularity 0.005: 1.335*2=2.67 ok at 0.005
-    r = grim_test(mean=1.335, n=2, granularity=0.005)
+    # mean=1.335 with n=200, granularity 0.005: 267/200=1.335 精确成立
+    r = grim_test(mean=1.335, n=200, granularity=0.005)
     assert r["grim_passed"] is True
     assert r["violated"] is False
+
+
+def test_grim_rejects_invalid_n():
+    import pytest
+    with pytest.raises(ValueError):
+        grim_test(mean=1.0, n=0)
 
 
 def test_sprite_catches_bad_sd():
@@ -65,6 +77,13 @@ def test_benford_passes_natural_data():
     r = benford_analysis(np.array([str(f) for f in fib if f > 0]))
     assert r["digit1_pct"] > 0.25
     assert r["deviation"] < 0.10
+    assert r["violated"] is False
+
+
+def test_benford_empty_input_is_not_a_fraud_signal():
+    # 没有可用数字 = 不适用，绝不能误报为造假
+    r = benford_analysis([])
+    assert r["n"] == 0
     assert r["violated"] is False
 
 

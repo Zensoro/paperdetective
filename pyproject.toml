@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paperdetective"
-version = "0.1.0"
+version = "0.2.0"
 description = "PaperDetective 学术打假检测器 — open-source pipeline that detects data fabrication, image manipulation, citation fraud, retraction flags, internal inconsistency, and cross-paper duplication in academic papers, with a strict JSON report."
 readme = "README.md"
 requires-python = ">=3.10"

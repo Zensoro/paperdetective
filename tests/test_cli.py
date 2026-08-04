@@ -34,3 +34,46 @@ def test_cli_analyze(tmp_path, capsys):
     assert rc == 0
     data = json.loads(out.read_text())
     assert data["analysis_metadata"]["processing_status"] == "success"
+
+
+def test_cli_accepts_directory_input(tmp_path):
+    from paperdetective.cli import main
+    d = tmp_path / "papers"
+    d.mkdir()
+    (d / "a.txt").write_text("均值=1.333, n=2")
+    (d / "b.txt").write_text("普通论文")
+    out = tmp_path / "out.json"
+    rc = main(["analyze", "--input", str(d), "--output", str(out)])
+    assert rc == 0
+    data = json.loads(out.read_text())
+    assert len(data["analysis_metadata"]["papers"]) == 2
+
+
+def test_cli_skips_unsupported_file_without_crashing(tmp_path):
+    from paperdetective.cli import main
+    good = tmp_path / "good.txt"
+    good.write_text("普通论文")
+    bad = tmp_path / "bad.xyz"
+    bad.write_text("???")
+    out = tmp_path / "out.json"
+    rc = main(["analyze", "--input", str(good), str(bad), "--output", str(out)])
+    assert rc == 0
+    assert out.exists()
+
+
+def test_cli_no_valid_input_returns_error(tmp_path):
+    from paperdetective.cli import main
+    rc = main(["analyze", "--input", str(tmp_path / "nonexistent_dir")])
+    assert rc == 2
+
+
+def test_cli_markdown_output(tmp_path):
+    from paperdetective.cli import main
+    f = tmp_path / "paper.txt"
+    f.write_text("均值=1.333, n=2")
+    out = tmp_path / "out.md"
+    rc = main(["analyze", "--input", str(f), "--markdown", "--output", str(out)])
+    assert rc == 0
+    md = out.read_text()
+    assert "PaperDetective 检测报告" in md
+    assert "免责声明" in md

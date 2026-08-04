@@ -11,19 +11,29 @@ BENFORD_EXPECTED = {1: 0.301, 2: 0.176, 3: 0.125, 4: 0.097, 5: 0.079,
 
 
 def grim_test(mean: float, n: int, granularity: float = 0.01) -> dict:
-    """GRIM: mean * n must be a multiple of granularity.
+    """GRIM test (Brown & Heathers 2017).
 
-    Due to floating-point representation the remainder of the division
-    may round to 0 or to the granularity itself, so both are accepted.
+    For integer-valued data (e.g. Likert scales, counts), a reported mean
+    rounded to a given ``granularity`` is *consistent* iff there exists an
+    integer total T such that T / n, rounded to the same granularity,
+    reproduces the reported mean. Equivalently: the nearest integer to
+    ``mean * n``, divided by ``n``, must round back to ``mean``.
     """
+    if n < 1:
+        raise ValueError("n must be a positive integer")
     total = mean * n
-    rem = total % granularity
-    passed = bool(rem < 1e-9 or abs(rem - granularity) < 1e-9)
+    nearest_total = round(total)
+    # half-width of the rounding window implied by the reporting granularity
+    tolerance = granularity / 2.0 + 1e-12
+    reconstructed = nearest_total / n
+    passed = bool(abs(reconstructed - mean) <= tolerance)
     return {
         "grim_passed": passed,
         "violated": not passed,
         "mean": mean, "n": n, "granularity": granularity,
         "total": round(total, 4),
+        "nearest_integer_total": int(nearest_total),
+        "reconstructed_mean": round(reconstructed, 6),
     }
 
 
@@ -56,8 +66,8 @@ def benford_analysis(numbers) -> dict:
     digits = np.array([_leading_digit(str(x)) for x in numbers])
     digits = digits[digits != 0]
     if len(digits) == 0:
-        # deviation 1.0 > 0.10 threshold => flagged as a fabrication signal
-        return {"digit1_pct": 0.0, "deviation": 1.0, "n": 0, "violated": True}
+        # no usable numbers: not applicable, must NOT be flagged as fraud
+        return {"digit1_pct": 0.0, "deviation": 0.0, "n": 0, "violated": False}
     counts = np.bincount(digits, minlength=10) / len(digits)
     deviation = max(abs(counts[d] - BENFORD_EXPECTED[d]) for d in range(1, 10))
     return {

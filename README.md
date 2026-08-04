@@ -1,0 +1,112 @@
+# 🔍 PaperDetective
+
+**论文内容级学术打假检测器** — 对论文进行数据造假、图片操纵、引用造假、撤稿标记、内文自悖、跨论文重复六类信号筛查，输出严格的结构化报告。
+
+[![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-93%20passed-brightgreen)](#-测试)
+
+> ⚖️ **免责声明**：本工具的检测结果是**筛查信号**而非法证定论，可能存在误报/漏报；不得作为对论文或作者学术不端的唯一判定依据，请务必结合领域专家复核。
+
+---
+
+## ✨ 特性
+
+| 检测模块 | 方法 | 证据级别 | 运行模式 |
+| --- | --- | --- | --- |
+| 数据造假 | **GRIM**（均值×样本量整数一致性）、Benford 首位分布、p-curve | 硬证据 / 软信号 | 🆓 Free |
+| 图片操纵 | pHash 感知哈希（文内图复用）、ELA 错误水平分析（局部误差集中检测） | 硬证据 / 软信号 | 🆓 Free |
+| 跨论文重复 | 跨文档 pHash 比对、数据指纹 | 硬证据 | 🆓 Free |
+| 引用造假 | DOI 格式校验 + doi.org 存在性解析 | 硬证据 | 💎 PRO |
+| 撤稿标记 | 撤稿关键词 / 元数据交叉核查（可插拔） | 硬证据 | 💎 PRO |
+| 内文自悖 | 数值主张相对偏差比较（NLI 可插拔） | 软信号 | 🆓 Free |
+
+- **确定性算法**：所有结论基于确定性算法与规则提取，无模型自由推断，无幻觉风险
+- **分层置信度引擎**：硬证据 0.85+，软信号按 corroboration 分层，内部知识一律封顶 0.60
+- **严格 schema**：输出 Pydantic 校验的 JSON 报告，同时支持美化 Markdown 导出
+- **批量处理**：支持目录输入，单文件失败不影响整批
+- **离线可用**：Free 层全部本地运行；PRO 层仅 DOI 校验需要联网
+
+## 🚀 安装
+
+```bash
+pip install -e .                # 核心功能
+pip install -e ".[pdf,docx]"    # PDF / Word 支持
+pip install -e ".[dev]"         # 开发（pytest）
+```
+
+## 📖 快速开始
+
+```bash
+# 分析单个文件（输出 JSON）
+paperdetective analyze --input paper.pdf
+
+# 批量分析整个目录，输出 Markdown 报告
+paperdetective analyze --input ./papers/ --markdown --output report.md
+
+# PRO 模式：启用联网 DOI 存在性校验
+paperdetective analyze --input paper.pdf --pro
+```
+
+支持格式：`.txt` / `.pdf` / `.docx` / `.png` / `.jpg` / `.jpeg` / `.gif` / `.bmp`
+
+### Python API
+
+```python
+from paperdetective.ingest import ingest_path
+from paperdetective.analyze import run_detection
+from paperdetective.report import to_markdown
+
+docs = [ingest_path("paper.pdf")]
+result = run_detection(docs, pro=False)
+print(to_markdown(result))
+```
+
+### GRIM 检测示例
+
+整数数据（如 Likert 量表）的均值与样本量必须满足整数一致性：
+报告 `均值=2.66, n=2` 时，总分只能是整数 5 或 6（对应均值 2.5 或 3.0），
+2.66 在数学上不可能存在 → **GRIM 违规（硬证据，置信度 0.90）**。
+
+## 🏗️ 架构
+
+```
+输入 (PDF/Word/图片/文本, 支持批量)
+    ↓
+Phase A: ingest.py          — 文本/图片抽取，统一为 Document
+    ↓
+Phase B: detect/            — 六类检测器（纯函数，可独立测试）
+         engine/            — 置信度分层 · 方法冲突仲裁 · 三角验证
+    ↓
+Phase C: analyze.py → report.py — 管线编排，输出 JSON / Markdown
+```
+
+```
+paperdetective/
+├── ingest.py            # 输入抽取（txt/pdf/docx/图片）
+├── analyze.py           # 检测管线编排
+├── report.py            # Markdown 报告渲染
+├── schemas.py           # Pydantic 报告 schema
+├── eval.py              # gold 标注评估（precision/recall/F1）
+├── detect/              # 数据造假 · 图片操纵 · 引用造假 · 内文自悖 · 跨论文重复
+└── engine/              # 置信度引擎 · 仲裁 · 三角验证
+```
+
+## ✅ 测试
+
+```bash
+python -m pytest        # 93 项测试
+```
+
+## 🗺️ Roadmap
+
+- [ ] PDF 内嵌图片自动提取
+- [ ] SPRITE 完整实现接入管线
+- [ ] NLI 内文自悖（LLM 可插拔）
+- [ ] 撤稿数据库（Retraction Watch / Crossref）交叉核查
+- [ ] HTML / PDF 报告导出
+- [ ] Web 界面
+
+## 📄 License
+
+MIT — 详见 [LICENSE](LICENSE)

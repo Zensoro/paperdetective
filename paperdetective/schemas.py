@@ -23,7 +23,6 @@ class EvidencePack(BaseModel):
     source_location: str = Field(description="页码/段落/图号/表号/行号")
     quote: str = Field(description="原文逐字引用或数据忠实转录")
     basis: str = Field(default="原文")
-    c14_detail: Optional[Dict[str, Any]] = None  # 保留给考古扩展
     extra: Optional[Dict[str, Any]] = None
 
 

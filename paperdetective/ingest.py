@@ -24,8 +24,8 @@ def ingest_text(text: str, paper_id: str = "doc") -> Document:
 
 
 def extract_images(data, format: str = "png", prefix: str = "img") -> list[tuple[str, Image.Image]]:
-    img = Image.open(data)
-    return [(f"{prefix}0", img.copy())]
+    with Image.open(data) as img:
+        return [(f"{prefix}0", img.copy())]
 
 
 def ingest_path(path: str) -> Document:
@@ -34,8 +34,8 @@ def ingest_path(path: str) -> Document:
     if suffix == ".txt":
         return ingest_text(p.read_text(encoding="utf-8", errors="ignore"), paper_id=p.stem)
     if suffix in (".png", ".jpg", ".jpeg", ".gif", ".bmp"):
-        img = Image.open(p)
-        return Document(paper_id=p.stem, images=[(p.stem, img.copy())])
+        with Image.open(p) as img:
+            return Document(paper_id=p.stem, images=[(p.stem, img.copy())])
     if suffix == ".pdf":
         try:
             from pypdf import PdfReader
@@ -44,7 +44,7 @@ def ingest_path(path: str) -> Document:
         reader = PdfReader(str(p))
         text = "\n".join((page.extract_text() or "") for page in reader.pages)
         return Document(paper_id=p.stem, text=text)
-    if suffix in (".docx", ".doc"):
+    if suffix == ".docx":
         try:
             import docx
         except ImportError:
@@ -52,4 +52,6 @@ def ingest_path(path: str) -> Document:
         d = docx.Document(str(p))
         text = "\n".join(par.text for par in d.paragraphs)
         return Document(paper_id=p.stem, text=text)
+    if suffix == ".doc":
+        raise ValueError("legacy .doc is not supported; please convert to .docx first")
     raise ValueError(f"unsupported file type: {suffix}")
