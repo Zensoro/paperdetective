@@ -13,14 +13,21 @@ def reconstruct_chart_value(bar_height_px: float, pixel_min: float,
 
 def triangle_verify(chart_value: float, claimed_value: float,
                     stat_value: float, threshold: float = 0.15) -> dict:
-    """Any leg mismatching the others signals fabrication."""
+    """Any leg mismatching the others signals fabrication.
+
+    Each leg uses a symmetric relative deviation (denominator is the larger
+    of the two compared values) so the verdict is order-independent and does
+    not over-amplify when the claimed value is small.
+    """
+    def _diff(a: float, b: float) -> float:
+        return abs(a - b) / max(abs(a), abs(b), 1e-9)
+
     mismatches = []
-    denom = claimed_value if claimed_value != 0 else 1.0
-    if abs(chart_value - claimed_value) / abs(denom) > threshold:
+    if _diff(chart_value, claimed_value) > threshold:
         mismatches.append("chart")
-    if abs(stat_value - claimed_value) / abs(denom) > threshold:
+    if _diff(stat_value, claimed_value) > threshold:
         mismatches.append("stats")
-    if abs(chart_value - stat_value) / abs(denom) > threshold:
+    if _diff(chart_value, stat_value) > threshold:
         mismatches.append("chart-stats")
     return {"mismatch": bool(mismatches), "mismatch_locations": mismatches,
             "values": {"chart": chart_value, "claimed": claimed_value,
