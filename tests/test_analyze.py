@@ -26,8 +26,15 @@ def test_run_detection_has_disclaimer():
     assert "筛查信号" in result.internal_review.disclaimer
 
 
-def test_run_detection_pro_mode_disables_network():
-    # pro=False (default) should NOT call network DOI check
-    doc = Document(paper_id="p1", text="10.1016/j.cell.2023.04.021 被引用")
-    result = run_detection([doc], pro=False)
+def test_run_detection_crash_safety_on_trailing_period():
+    doc = Document(paper_id="p1", text="均值=1.333. n=2 以及 p=0.04. p=0.05")
+    result = run_detection([doc])
     assert isinstance(result, AnalysisResult)
+
+
+def test_run_detection_mode_metadata():
+    doc = Document(paper_id="p1", text="普通论文")
+    free_r = run_detection([doc], pro=False)
+    pro_r = run_detection([doc], pro=True)
+    assert free_r.analysis_metadata["mode"] == "free"
+    assert pro_r.analysis_metadata["mode"] == "pro"

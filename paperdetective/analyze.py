@@ -9,8 +9,8 @@ from .schemas import AnalysisResult, Finding, EvidencePack, InternalReview
 from .detect.data_fabrication import grim_test, sprite_test, benford_analysis, p_curve_analysis
 from .engine.confidence import confidence_score
 
-MEAN_N_RE = re.compile(r"均值\s*[=:：]?\s*([0-9.]+)[^\d]*n\s*[=:：]\s*(\d+)")
-P_VALUE_RE = re.compile(r"[pP]\s*[=:：]\s*([0-9.]+)")
+MEAN_N_RE = re.compile(r"均值\s*[=:：]?\s*(\d+(?:\.\d+)?)[^\d]*n\s*[=:：]\s*(\d+)")
+P_VALUE_RE = re.compile(r"[pP]\s*[=:：]\s*(\d+(?:\.\d+)?)")
 
 # 免费核心包含的检测方法（pro 模式额外解锁联网检测）
 FREE_METHODS = {"GRIM", "SPRITE", "Benford", "p-curve", "pHash", "ELA"}
@@ -20,12 +20,23 @@ PRO_METHODS = {"DOI_Check", "Retraction_Check", "NLI"}
 def _find_grim_claims(text: str) -> list[dict]:
     claims = []
     for m in MEAN_N_RE.finditer(text):
-        claims.append({"mean": float(m.group(1)), "n": int(m.group(2))})
+        try:
+            mean = float(m.group(1))
+            n = int(m.group(2))
+        except ValueError:
+            continue
+        claims.append({"mean": mean, "n": n})
     return claims
 
 
 def _find_p_values(text: str) -> list[float]:
-    return [float(m.group(1)) for m in P_VALUE_RE.finditer(text)]
+    pvals = []
+    for m in P_VALUE_RE.finditer(text):
+        try:
+            pvals.append(float(m.group(1)))
+        except ValueError:
+            continue
+    return pvals
 
 
 def run_detection(docs: list[Document], pro: bool = False) -> AnalysisResult:
