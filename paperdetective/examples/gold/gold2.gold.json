@@ -1,0 +1,6 @@
+{
+  "paper_id": "gold2",
+  "text": "实验组空腹血糖水平均值=7.653 mmol/L，样本量 n=3，三次独立测量结果高度一致，表明数据稳定可靠。",
+  "expected_findings": 1,
+  "finding_types": ["Data_Fabrication"]
+}
