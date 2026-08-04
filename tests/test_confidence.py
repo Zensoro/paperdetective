@@ -3,12 +3,21 @@ from paperdetective.engine.confidence import (
     confidence_score, HARD_EVIDENCE, SOFT_SIGNAL,
 )
 
-HARD = {"GRIM", "PRNU", "DOI_Check", "Retraction_Check"}
+HARD = {"GRIM", "SPRITE", "PRNU", "DOI_Check", "Retraction_Check"}
 
 
 def test_hard_evidence_high_confidence():
     assert HARD.issubset(HARD_EVIDENCE)
     assert confidence_score(evidence=["GRIM"], soft=0, n_corroborating=0) >= 0.85
+
+
+def test_sprite_is_hard_evidence():
+    assert confidence_score(evidence=["SPRITE"], soft=0, n_corroborating=0) >= 0.85
+
+
+def test_soft_derived_from_evidence():
+    s = confidence_score(evidence=["p-curve"], n_corroborating=0)
+    assert 0.40 <= s <= 0.59
 
 
 def test_soft_signal_bounded():
