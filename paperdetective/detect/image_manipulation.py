@@ -35,8 +35,10 @@ def phash(img: Image.Image, hash_size: int = 16) -> str:
     dct = np.zeros((hash_size, hash_size))
     for u in range(hash_size):
         for v in range(hash_size):
-            cu = 1.0 if u == 0 else np.sqrt(2) / 2
-            cv = 1.0 if v == 0 else np.sqrt(2) / 2
+            # orthogonal DCT-II normalization: 1/sqrt(2) for zero freq,
+            # 1.0 otherwise — keeps hash compatible with imagehash libs
+            cu = 1.0 / np.sqrt(2) if u == 0 else 1.0
+            cv = 1.0 / np.sqrt(2) if v == 0 else 1.0
             s = 0.0
             for x in range(hash_size):
                 for y in range(hash_size):

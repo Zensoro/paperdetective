@@ -23,14 +23,15 @@ def test_phash_same_image_same_hash():
 
 
 def test_phash_different_images_differ():
-    a = phash(_make_image(10))
-    b = phash(_make_image(250))
+    a = phash(_make_gradient(0, 255))
+    b = phash(_make_gradient(255, 0))
     assert hamming_distance(a, b) > 8
 
 
 def test_detect_reuse_finds_duplicate():
     # solid fills are degenerate for pHash (see report) — use structured
-    # gradients: fig2 is fig1 shifted by 1 (near-duplicate), fig3 distinct.
+    # gradients: fig2 is fig1 with a brightness offset (near-duplicate),
+    # fig3 is reversed (distinct).
     imgs = {"fig1": _make_gradient(0, 255), "fig2": _make_gradient(1, 255), "fig3": _make_gradient(255, 0)}
     pairs = detect_reuse(imgs, threshold=8)
     assert any({"fig1", "fig2"} == set(p) for p in pairs)
