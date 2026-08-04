@@ -29,7 +29,11 @@ def match_data_fingerprints(papers: dict[str, dict]) -> list[tuple[str, str]]:
 
 
 def find_cross_paper_duplicates(papers: dict[str, dict]) -> list[tuple[str, str, str]]:
-    """Return (paperA, paperB, image_id) for reused images across papers."""
+    """Return (image_id_a, image_id_b, "cross-paper") for reused images across papers.
+
+    image_id_a / image_id_b are prefixed as "{paper_id}:{img_id}" so the
+    originating paper is identifiable (e.g. "paperA:fig1", "paperB:fig2").
+    """
     result = []
     keys = list(papers)
     for i in range(len(keys)):
