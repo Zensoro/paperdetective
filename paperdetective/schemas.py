@@ -67,6 +67,10 @@ class InternalReview(BaseModel):
     hallucination_check: str = ""
     missing_info: str = ""
     external_knowledge_disclaimer: str = ""
+    disclaimer: str = (
+        "检测结果是筛查信号而非法证定论，可能存在误报/漏报；"
+        "不得作为对论文或作者学术不端的唯一判定依据，建议结合领域专家复核。"
+    )
 
 
 class AnalysisResult(BaseModel):
