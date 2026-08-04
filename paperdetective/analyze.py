@@ -10,7 +10,7 @@ from .detect.data_fabrication import grim_test, benford_analysis, p_curve_analys
 from .detect.image_manipulation import ela_score, detect_reuse
 from .detect.internal_inconsistency import extract_numbers
 from .detect.cross_paper import find_cross_paper_duplicates
-from .detect.citation_fraud import check_doi_existence
+from .plugins import load_pro_extensions, ProContext
 from .engine.confidence import confidence_score
 
 # 中英文均值声明: "均值=12.3, n=40" / "mean = 1.33, n = 30" / "M=2.66 (n=12)"
@@ -20,16 +20,14 @@ MEAN_N_RE = re.compile(
     re.IGNORECASE,
 )
 P_VALUE_RE = re.compile(r"[pP]\s*[=:：]\s*(\d*\.\d+|\d+)")
-DOI_RE = re.compile(r"10\.\d{4,9}/[-._;()/:A-Za-z0-9]+")
 
 # Benford 分布检验在小样本上噪声极大，设置最小样本量避免误报
 BENFORD_MIN_SAMPLE = 20
 # p-curve 需要足够数量的精确 p 值才有统计意义
 P_CURVE_MIN_SAMPLE = 10
 
-# 免费核心包含的检测方法（pro 模式额外解锁联网检测）
+# 免费核心包含的检测方法（pro 能力由 paperdetective-pro 扩展提供）
 FREE_METHODS = {"GRIM", "SPRITE", "Benford", "p-curve", "pHash", "ELA"}
-PRO_METHODS = {"DOI_Check", "Retraction_Check", "NLI"}
 
 
 def _find_grim_claims(text: str) -> list[dict]:
@@ -50,11 +48,6 @@ def _find_p_values(text: str) -> list[float]:
         except ValueError:
             continue
     return pvals
-
-
-def _find_dois(text: str) -> list[str]:
-    # 去掉 DOI 末尾误捕获的标点（如句号、逗号、右括号）
-    return sorted({m.rstrip(".,);]") for m in DOI_RE.findall(text)})
 
 
 def _mk_finding(findings: list[Finding], **kwargs) -> None:
@@ -173,24 +166,13 @@ def run_detection(docs: list[Document], pro: bool = False) -> AnalysisResult:
                         confidence_score=confidence_score(evidence=["ELA"]),
                     )
 
-        # --- DOI 存在性校验 (PRO, 联网) ---
+        # --- PRO 扩展（联网检测，仅当安装 paperdetective-pro 时启用）---
         if pro:
-            for doi in _find_dois(doc.text):
-                detectors_run.append("DOI_Check")
-                exists = check_doi_existence(doi)
-                if exists is False:
-                    _mk_finding(
-                        findings,
-                        finding_type=["Citation_Fabrication"],
-                        title="引文 DOI 无法解析（疑似虚构引用）",
-                        description=f"DOI {doi} 格式合法但在 doi.org 上解析失败，提示该引用可能不存在。",
-                        severity="High",
-                        evidence_pack=[EvidencePack(
-                            type="Text", source_location=doc.paper_id,
-                            quote=doi, basis="原文")],
-                        detection_method="DOI_Check",
-                        confidence_score=confidence_score(evidence=["DOI_Check"]),
-                    )
+            for run_pro in load_pro_extensions():
+                ctx = ProContext(start_id=len(findings) + 1)
+                run_pro(doc, ctx)
+                findings.extend(ctx.findings)
+                detectors_run.extend(ctx.detectors_run)
 
     # --- 跨论文图片复用 (FREE, 多篇输入时启用) ---
     if len(docs) >= 2:
@@ -229,11 +211,10 @@ def run_detection(docs: list[Document], pro: bool = False) -> AnalysisResult:
             no_findings_reason=None if findings else "未发现六类造假信号。",
             hallucination_check="所有结论基于确定性算法(GRIM/Benford/p-curve/pHash/ELA)与规则提取，无模型自由推断。",
             missing_info=(
-                "SPRITE/NLI/撤稿联网核查为可插拔模块，当前管线未默认启用；"
-                if not pro else
-                "Retraction_Check 与 NLI 为可插拔模块，当前管线未默认启用；"
+                "联网检测（DOI/撤稿核查）、NLI、批量扫描、PDF 报告为 Pro 扩展（paperdetective-pro），"
+                "当前未安装；"
             ) + "PDF 内嵌图片提取将在后续版本接入。",
-            external_knowledge_disclaimer="PRO 模式的 DOI 校验依赖 doi.org 公开解析服务。"
+            external_knowledge_disclaimer="PRO 扩展的联网检测依赖外部公开服务（如 doi.org）。"
             if pro else "无",
         ),
     )
