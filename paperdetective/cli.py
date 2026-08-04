@@ -35,6 +35,8 @@ def _cmd_analyze(args, _) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="paperdetective",
                                      description="PaperDetective 学术打假检测器")
+    parser.add_argument("--version", action="version",
+                        version=f"paperdetective {__version__}")
     sub = parser.add_subparsers(dest="cmd")
     pa = sub.add_parser("analyze", help="run detection pipeline")
     pa.add_argument("--input", nargs="+", required=True,
