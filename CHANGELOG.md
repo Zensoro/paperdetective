@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/).
 
+## [0.3.0] - 2026-08-04
+
+### Changed
+- **Free/Pro 分仓**：联网付费逻辑（DOI 解析、撤稿核查）从 MIT 核心移出，进入私有扩展 `paperdetective-pro`
+- **插件机制**：新增 `plugins.py`，通过 `paperdetective.pro` entry-point 在运行时加载 Pro 扩展；未安装时 `--pro` 优雅降级为免费模式
+- **移除**：`detect/citation_fraud.py` 及其测试迁移至 `paperdetective-pro` 仓库
+
 ## [0.2.0] - 2026-08-04
 
 ### Fixed

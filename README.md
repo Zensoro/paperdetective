@@ -4,7 +4,7 @@
 
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-93%20passed-brightgreen)](#-测试)
+[![Tests](https://img.shields.io/badge/tests-86%20passed-brightgreen)](#-测试)
 
 > ⚖️ **免责声明**：本工具的检测结果是**筛查信号**而非法证定论，可能存在误报/漏报；不得作为对论文或作者学术不端的唯一判定依据，请务必结合领域专家复核。
 
@@ -17,15 +17,15 @@
 | 数据造假 | **GRIM**（均值×样本量整数一致性）、Benford 首位分布、p-curve | 硬证据 / 软信号 | 🆓 Free |
 | 图片操纵 | pHash 感知哈希（文内图复用）、ELA 错误水平分析（局部误差集中检测） | 硬证据 / 软信号 | 🆓 Free |
 | 跨论文重复 | 跨文档 pHash 比对、数据指纹 | 硬证据 | 🆓 Free |
-| 引用造假 | DOI 格式校验 + doi.org 存在性解析 | 硬证据 | 💎 PRO |
-| 撤稿标记 | 撤稿关键词 / 元数据交叉核查（可插拔） | 硬证据 | 💎 PRO |
+| 引用造假 | DOI 格式校验 + doi.org 存在性解析 | 硬证据 | 💎 PRO 扩展 |
+| 撤稿标记 | 撤稿关键词 / 元数据交叉核查（可插拔） | 硬证据 | 💎 PRO 扩展 |
 | 内文自悖 | 数值主张相对偏差比较（NLI 可插拔） | 软信号 | 🆓 Free |
 
 - **确定性算法**：所有结论基于确定性算法与规则提取，无模型自由推断，无幻觉风险
 - **分层置信度引擎**：硬证据 0.85+，软信号按 corroboration 分层，内部知识一律封顶 0.60
 - **严格 schema**：输出 Pydantic 校验的 JSON 报告，同时支持美化 Markdown 导出
 - **批量处理**：支持目录输入，单文件失败不影响整批
-- **离线可用**：Free 层全部本地运行；PRO 层仅 DOI 校验需要联网
+- **离线可用**：Free 层全部本地运行；联网 PRO 能力由可选扩展 `paperdetective-pro` 提供
 
 ## 🚀 安装
 
@@ -33,7 +33,12 @@
 pip install -e .                # 核心功能
 pip install -e ".[pdf,docx]"    # PDF / Word 支持
 pip install -e ".[dev]"         # 开发（pytest）
+pip install paperdetective-pro  # 付费扩展（解锁 --pro 联网检测）
 ```
+
+> 🔒 **开源/付费分仓**：本仓库（MIT）只含免费核心。联网检测（DOI 解析、撤稿交叉
+> 核查、NLI、批量、HTML/PDF 报告）在私有扩展 `paperdetective-pro` 中，通过
+> `paperdetective.pro` entry-point 按需加载；未安装时 `--pro` 优雅降级为免费模式。
 
 ## 📖 快速开始
 
@@ -87,26 +92,33 @@ paperdetective/
 ├── analyze.py           # 检测管线编排
 ├── report.py            # Markdown 报告渲染
 ├── schemas.py           # Pydantic 报告 schema
+├── plugins.py           # Pro 扩展加载（entry-point）
 ├── eval.py              # gold 标注评估（precision/recall/F1）
-├── detect/              # 数据造假 · 图片操纵 · 引用造假 · 内文自悖 · 跨论文重复
+├── detect/              # 数据造假 · 图片操纵 · 内文自悖 · 跨论文重复
 └── engine/              # 置信度引擎 · 仲裁 · 三角验证
 ```
+
+Pro 扩展独立于本仓库：`paperdetective-pro`（私有/付费），含 DOI 解析、撤稿核查、
+NLI、批量扫描、报告导出，注册 `paperdetective.pro` entry-point 后自动接入管线。
 
 ## ✅ 测试
 
 ```bash
-python -m pytest        # 93 项测试
+python -m pytest        # 86 项测试
 ```
 
 ## 🗺️ Roadmap
 
 - [ ] PDF 内嵌图片自动提取
 - [ ] SPRITE 完整实现接入管线
-- [ ] NLI 内文自悖（LLM 可插拔）
-- [ ] 撤稿数据库（Retraction Watch / Crossref）交叉核查
-- [ ] HTML / PDF 报告导出
+- [ ] Pro 扩展：撤稿数据库（Retraction Watch / Crossref）交叉核查
+- [ ] Pro 扩展：NLI 内文自悖（LLM 可插拔）
+- [ ] Pro 扩展：HTML / PDF 报告导出
 - [ ] Web 界面
 
 ## 📄 License
 
-MIT — 详见 [LICENSE](LICENSE)
+MIT — 本仓库（免费核心）见 [LICENSE](LICENSE)。
+
+联网付费能力（DOI 解析、撤稿核查、NLI、批量、报告导出）属于私有扩展
+`paperdetective-pro`，采用专有许可证，不随本仓库分发。
