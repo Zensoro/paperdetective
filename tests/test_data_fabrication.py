@@ -10,6 +10,7 @@ def test_grim_passes_near_zero_remainder():
     # rounding to ~8.7e-17 (near-zero) instead of exactly 0.0 in float arithmetic
     r = grim_test(mean=1.33, n=2, granularity=0.01)
     assert r["grim_passed"] is True
+    assert r["violated"] is False
 
 
 def test_grim_catches_impossible_mean():
@@ -17,23 +18,34 @@ def test_grim_catches_impossible_mean():
     # (three decimals vs granularity's two) => impossible
     r = grim_test(mean=1.333, n=2, granularity=0.01)
     assert r["grim_passed"] is False
+    assert r["violated"] is True
 
 
 def test_grim_passes_possible_mean():
     # mean=1.335 with n=2, granularity 0.005: 1.335*2=2.67 ok at 0.005
     r = grim_test(mean=1.335, n=2, granularity=0.005)
     assert r["grim_passed"] is True
+    assert r["violated"] is False
 
 
 def test_sprite_catches_bad_sd():
     # sd > sd_max for n=4 => impossible standard deviation
     r = sprite_test(mean=10.0, sd=2.5, n=4)
     assert r["sprite_passed"] is False
+    assert r["violated"] is True
 
 
 def test_sprite_passes_plausible_sd():
     r = sprite_test(mean=10.0, sd=1.0, n=4)
     assert r["sprite_passed"] is True
+    assert r["violated"] is False
+
+
+def test_sprite_reports_strict_bound_and_used_cap():
+    # n=4 => sd_max_possible=0.5774 (strict, rounded), sd_cap=1.1547 (2x used)
+    r = sprite_test(mean=10.0, sd=1.0, n=4)
+    assert r["sd_max_possible"] == 0.5774
+    assert r["sd_cap"] == 1.1547
 
 
 def test_benford_flags_uniform_data():
@@ -41,7 +53,8 @@ def test_benford_flags_uniform_data():
     data = np.array([str(i) for i in range(9, 9000)])
     r = benford_analysis(data)
     assert r["digit1_pct"] < 0.20
-    assert r["deviation"] > 0.05
+    assert r["deviation"] > 0.10
+    assert r["violated"] is True
 
 
 def test_benford_passes_natural_data():
@@ -51,6 +64,8 @@ def test_benford_passes_natural_data():
         fib.append(fib[-1] + fib[-2])
     r = benford_analysis(np.array([str(f) for f in fib if f > 0]))
     assert r["digit1_pct"] > 0.25
+    assert r["deviation"] < 0.10
+    assert r["violated"] is False
 
 
 def test_p_curve_flags_p_hacking():
@@ -58,12 +73,14 @@ def test_p_curve_flags_p_hacking():
     ps = [0.049, 0.049, 0.050, 0.048, 0.051] * 6
     r = p_curve_analysis(np.array(ps))
     assert r["p_hacking_suspicious"] is True
+    assert r["violated"] is True
 
 
 def test_p_curve_clean_distribution():
     ps = np.linspace(0.001, 0.049, 30)
     r = p_curve_analysis(ps)
     assert r["p_hacking_suspicious"] is False
+    assert r["violated"] is False
 
 
 def test_p_curve_short_sequence_includes_ratio():
@@ -71,3 +88,4 @@ def test_p_curve_short_sequence_includes_ratio():
     r = p_curve_analysis([0.05, 0.04])
     assert "near_threshold_ratio" in r
     assert r["near_threshold_ratio"] == 0.0
+    assert r["violated"] is False
