@@ -5,9 +5,17 @@ from paperdetective.detect.data_fabrication import (
 )
 
 
-def test_grim_catches_impossible_mean():
-    # mean=1.33 with n=2: 1.33*2=2.66 not integer multiple of 0.01 => impossible
+def test_grim_passes_near_zero_remainder():
+    # mean=1.33 with n=2: 1.33*2=2.66=266*0.01 => possible, despite 2.66 % 0.01
+    # rounding to ~8.7e-17 (near-zero) instead of exactly 0.0 in float arithmetic
     r = grim_test(mean=1.33, n=2, granularity=0.01)
+    assert r["grim_passed"] is True
+
+
+def test_grim_catches_impossible_mean():
+    # mean=1.333 with n=2: 1.333*2=2.666, not an integer multiple of 0.01
+    # (three decimals vs granularity's two) => impossible
+    r = grim_test(mean=1.333, n=2, granularity=0.01)
     assert r["grim_passed"] is False
 
 
@@ -56,3 +64,10 @@ def test_p_curve_clean_distribution():
     ps = np.linspace(0.001, 0.049, 30)
     r = p_curve_analysis(ps)
     assert r["p_hacking_suspicious"] is False
+
+
+def test_p_curve_short_sequence_includes_ratio():
+    # short branch (<10 values) must still honor the dict contract
+    r = p_curve_analysis([0.05, 0.04])
+    assert "near_threshold_ratio" in r
+    assert r["near_threshold_ratio"] == 0.0

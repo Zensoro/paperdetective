@@ -19,7 +19,7 @@ def grim_test(mean: float, n: int, granularity: float = 0.01) -> dict:
     total = mean * n
     rem = total % granularity
     return {
-        "grim_passed": bool(rem == 0.0 or abs(rem - granularity) < 1e-9),
+        "grim_passed": bool(rem < 1e-9 or abs(rem - granularity) < 1e-9),
         "mean": mean, "n": n, "granularity": granularity,
         "total": round(total, 4),
     }
@@ -62,7 +62,11 @@ def p_curve_analysis(p_values) -> dict:
     ps = np.asarray(p_values, dtype=float)
     ps = ps[(ps > 0) & (ps < 1)]
     if len(ps) < 10:
-        return {"p_hacking_suspicious": False, "n": int(len(ps))}
+        return {
+            "p_hacking_suspicious": False,
+            "near_threshold_ratio": 0.0,
+            "n": int(len(ps)),
+        }
     near_threshold = np.sum((ps >= 0.04) & (ps <= 0.05))
     ratio = near_threshold / len(ps)
     # >30% of p-values crammed within 1% of threshold = suspicious
