@@ -21,14 +21,13 @@ def compare_claims(claim_a: str, claim_b: str, threshold: float = 0.2) -> dict:
     a = extract_numbers(claim_a)
     b = extract_numbers(claim_b)
     if not a or not b:
-        return {"contradiction": None, "reason": "missing numbers"}
-    # align by order; compare first common pair
+        return {"contradiction": None, "reason": "missing numbers", "pairs": [], "threshold": threshold}
+    # align by order; compare each common position (a[i] vs b[i])
     contradictions = []
-    for x in a:
-        for y in b:
-            denom = x if x != 0 else 1.0
-            if abs(x - y) / abs(denom) > threshold and abs(x - y) > 1e-6:
-                contradictions.append((x, y))
+    for x, y in zip(a, b):
+        denom = max(abs(x), abs(y), 1e-9)
+        if abs(x - y) / denom > threshold and abs(x - y) > 1e-6:
+            contradictions.append((x, y))
     return {
         "contradiction": bool(contradictions),
         "pairs": contradictions[:5],
