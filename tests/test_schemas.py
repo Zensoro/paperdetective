@@ -51,3 +51,39 @@ def test_empty_findings_valid_report():
 
 def test_detection_methods_registry():
     assert "GRIM" in DETECTION_METHODS and "pHash" in DETECTION_METHODS
+
+
+def test_finding_rejects_bad_method():
+    with pytest.raises(ValidationError):
+        Finding(
+            id="FD-003", finding_type=["Data_Fabrication"], title="t",
+            description="d", severity="High", evidence_pack=[],
+            detection_method="Not_A_Real_Method", confidence_score=0.5,
+        )
+
+
+def test_finding_rejects_out_of_range_confidence():
+    with pytest.raises(ValidationError):
+        Finding(
+            id="FD-004", finding_type=["Data_Fabrication"], title="t",
+            description="d", severity="High", evidence_pack=[],
+            detection_method="GRIM", confidence_score=1.5,
+        )
+
+
+def test_finding_rejects_bad_severity():
+    with pytest.raises(ValidationError):
+        Finding(
+            id="FD-005", finding_type=["Data_Fabrication"], title="t",
+            description="d", severity="CRITICAL", evidence_pack=[],
+            detection_method="GRIM", confidence_score=0.5,
+        )
+
+
+def test_finding_accepts_high_severity():
+    f = Finding(
+        id="FD-006", finding_type=["Data_Fabrication"], title="t",
+        description="d", severity="High", evidence_pack=[],
+        detection_method="GRIM", confidence_score=0.5,
+    )
+    assert f.severity == "High"

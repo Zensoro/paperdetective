@@ -15,6 +15,8 @@ DETECTION_METHODS = [
     "ChartReconstruct", "Manual",
 ]
 
+SEVERITIES = ["High", "Medium", "Low"]
+
 
 class EvidencePack(BaseModel):
     type: str = Field(description="Text / Data / Visual")
@@ -50,6 +52,13 @@ class Finding(BaseModel):
     def check_method(cls, v: str) -> str:
         if v not in DETECTION_METHODS:
             raise ValueError(f"unknown detection_method: {v}")
+        return v
+
+    @field_validator("severity")
+    @classmethod
+    def check_severity(cls, v: str) -> str:
+        if v not in SEVERITIES:
+            raise ValueError(f"unknown severity: {v}")
         return v
 
 
