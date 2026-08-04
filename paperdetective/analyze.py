@@ -54,7 +54,7 @@ def _mk_finding(findings: list[Finding], **kwargs) -> None:
     findings.append(Finding(id=f"FD-{len(findings)+1:03d}", **kwargs))
 
 
-def run_detection(docs: list[Document], pro: bool = False) -> AnalysisResult:
+def run_detection(docs: list[Document], pro: bool = False, license_key: str | None = None) -> AnalysisResult:
     findings: list[Finding] = []
     detectors_run: list[str] = []
 
@@ -169,7 +169,7 @@ def run_detection(docs: list[Document], pro: bool = False) -> AnalysisResult:
         # --- PRO 扩展（联网检测，仅当安装 paperdetective-pro 时启用）---
         if pro:
             for run_pro in load_pro_extensions():
-                ctx = ProContext(start_id=len(findings) + 1)
+                ctx = ProContext(start_id=len(findings) + 1, license_key=license_key)
                 run_pro(doc, ctx)
                 findings.extend(ctx.findings)
                 detectors_run.extend(ctx.detectors_run)

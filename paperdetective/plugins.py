@@ -9,7 +9,7 @@ this repository, keeping the MIT core free and auditable.
 from __future__ import annotations
 
 from importlib.metadata import entry_points
-from typing import Any, List
+from typing import Any, List, Optional
 
 from .schemas import Finding
 
@@ -18,8 +18,9 @@ class ProContext:
     """Handed to pro extensions so they can append findings without owning
     the report envelope. Keeps IDs unique via a local counter."""
 
-    def __init__(self, start_id: int = 1) -> None:
+    def __init__(self, start_id: int = 1, license_key: Optional[str] = None) -> None:
         self._next = start_id
+        self.license_key = license_key
         self.findings: list[Finding] = []
         self.detectors_run: list[str] = []
 

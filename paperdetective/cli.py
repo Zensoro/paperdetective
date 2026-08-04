@@ -90,7 +90,7 @@ def _cmd_analyze(args) -> int:
         print("error: 所有输入文件均解析失败", file=sys.stderr)
         return 2
 
-    result = run_detection(docs, pro=args.pro)
+    result = run_detection(docs, pro=args.pro, license_key=args.license)
     if args.markdown:
         out = args.output or "paperdetective_report.md"
         Path(out).write_text(to_markdown(result), encoding="utf-8")
@@ -116,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="emit Markdown instead of JSON")
     pa.add_argument("--pro", action="store_true",
                     help="enable PRO-tier network detectors (DOI existence check)")
+    pa.add_argument("--license", help="PRO license key (paperdetective-pro)")
     args = parser.parse_args(argv)
     if args.cmd == "analyze":
         return _cmd_analyze(args)

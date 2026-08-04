@@ -36,6 +36,27 @@ def test_cli_analyze(tmp_path, capsys):
     assert data["analysis_metadata"]["processing_status"] == "success"
 
 
+def test_cli_pro_without_license_still_runs(tmp_path):
+    from paperdetective.cli import main
+    f = tmp_path / "paper.txt"
+    f.write_text("均值=1.333, n=2")
+    out = tmp_path / "out.json"
+    rc = main(["analyze", "--input", str(f), "--output", str(out), "--pro"])
+    assert rc == 0
+    data = json.loads(out.read_text())
+    assert data["analysis_metadata"]["mode"] == "pro"
+
+
+def test_cli_accepts_license_key_arg(tmp_path):
+    from paperdetective.cli import main
+    f = tmp_path / "paper.txt"
+    f.write_text("均值=1.333, n=2")
+    out = tmp_path / "out.json"
+    rc = main(["analyze", "--input", str(f), "--output", str(out),
+               "--pro", "--license", "abc.def"])
+    assert rc == 0
+
+
 def test_cli_accepts_directory_input(tmp_path):
     from paperdetective.cli import main
     d = tmp_path / "papers"
