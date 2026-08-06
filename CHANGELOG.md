@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/).
 
+## [0.6.0] - 2026-08-06
+
+### Added
+- **LaneReuse 检测器**（FREE, hard evidence）：泳道级图片取证。把图片切分成水平条带（膜）再切分成竖直泳道，逐泳道做像素级比对：Pearson 相关系数门控（≥0.95）+ 像素中位差确认（≤12）双重判据。命中官方认定造假 8/8：
+  - **Brand et al. 2013 (PLoS ONE 8:e71518, ORI)**：Fig6/Fig7 跨图条带重复，51 对 → 15 簇
+  - **Yin/Nassirpour et al. 2013 (PLoS ONE 8:e62170, Pfizer)**：Figure 6 blot 泳道三连重复（b6 带泳道 2/5/8 + 3/9），这正是 v0.5.0 中 RegionReuse 漏检、Pfizer 声明认定的 "duplicated bands inside western blots"
+  - **Bo-Yu et al. 2014 (ANGPTL4)**：52 对 → 18 簇，最大簇 11 条泳道横跨 3 张图
+- **hit 聚类聚合**：同一伪造泳道常被复制到多个目标（星形网络），逐对输出会把 62 个证据对变成 62 条 finding。Union-Find 连通聚类把互相链接的泳道折叠为簇，每个"重复泳道网络"只报一条 finding（并给出成员数/证据对数/最强相关系数）
+- **对照组方法论**：新增 3 篇方法学/综述类论文（2022 辅助犬 PTSD、2016 腺苷镇痛 meta、2016 梦游 meta）作为**无 WB 图稿对照组**。它们从未参与参数调优，用于验证 LaneReuse 无误报
+
+### Changed
+- **LaneReuse 双重预过滤**（对照组驱动，case-driven 调优的一部分）：
+  - **条带高度下限 `LANE_MIN_H=100`**：图表碎片（森林图标记、流程图边框、图例刻度）被空白投影误切成"泳道"，高度门控直接丢弃
+  - **泳道灰度熵下限 `LANE_MIN_ENTROPY=1.0`**：真实 blot 泳道有纹理信号（熵 ~1-4）；近空白条带（流程图边框等）熵 <1.0。无此过滤时对照组产生 1-5 个假簇，加入后 3/3 对照组零误报且 8/8 造假案例全部保持命中
+- **诚实记录 case-driven 调优边界**：LaneReuse 的阈值（corr/diff/height/entropy）是在 8 个官方认定造假案例上调出来的——即"训练集"上 100% 命中。对照组实验的意义在于：**从未参与调参的独立论文**上零误报，降低了过拟合风险，但不能声称已解决
+
+### Fixed
+- 版本号不一致：`__init__.py` 落后于 `pyproject.toml`，统一为 0.6.0
+
+### Tests
+- 111 项全绿（LaneReuse 新增聚类 3 项 + 熵门控 / 高度门控 / 门控回归 3 项测试）
+
 ## [0.5.0] - 2026-08-06
 
 ### Changed
