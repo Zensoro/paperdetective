@@ -1,3 +1,16 @@
+## [0.4.0] - 2026-08-06
+
+### Added
+- **PDF 内嵌图片自动提取**：`ingest.py` 现在会从 PDF 页面提取内嵌图片（pypdf），并**自动过滤页面占位图**（按"页"粒度统计：同一内容指纹出现在 ≥80% 页面的即页面装饰/水印/整页栅格，另加尺寸带过滤 >4000px / <100px）。此前 PLoS 等期刊 printable 版 PDF 每页嵌入同一整页栅格，会触发 pHash 上百条全误报
+- **RegionReuse 检测器**（FREE, hard evidence）：面板级图片取证。大图按 3x3 网格切分、小图按空白投影切分，分别做感知哈希，跨图/跨面板比对。首个实战命中：Brand et al. 2013 (PLoS ONE 8:e71518) 的 Figure 6 底部两格被 ORI 认定伪造（6B/6C）——整图 pHash 不可见，面板级命中
+- **BandELA 检测器**（FREE, soft signal）：条带级错误水平分析。按水平泳道分别做 ELA，相对整图条带中位数 2x 以上或局部误差集中的泳道标记为可疑（拼接/编辑特征）
+
+### Fixed
+- `split_panels` 裁剪索引 bug（列区间误用于行轴）
+- 页面占位图误报（见上，0.4.0 核心修复）
+
+### Tests
+- 97 项（新增 region_reuse / band_ela / furniture-filter 测试）
 # Changelog
 
 All notable changes to this project will be documented in this file.
