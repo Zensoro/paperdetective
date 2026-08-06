@@ -1,0 +1,55 @@
+{
+  "analysis_metadata": {
+    "papers": [
+      {
+        "title": "her3_brand2013",
+        "authors": null,
+        "journal_or_source": null,
+        "publication_year": null,
+        "input_id": "her3_brand2013"
+      }
+    ],
+    "analysis_timestamp": "2026-08-06T10:07:59.115937+00:00",
+    "agent_version": "PaperDetective v1.0",
+    "processing_status": "success",
+    "reference_basis_provided": false,
+    "mode": "free",
+    "detectors_run": [
+      "Benford",
+      "ELA",
+      "GRIM",
+      "pHash"
+    ]
+  },
+  "detected_findings": [
+    {
+      "id": "FD-001",
+      "finding_type": [
+        "Data_Fabrication"
+      ],
+      "title": "数字首位分布偏离 Benford 定律",
+      "description": "文本中 1854 个数字的首位分布与 Benford 期望的最大偏差 0.141（首位 1 占比 26.5%，期望约 30.1%），提示数字可能经人工编造。",
+      "severity": "Low",
+      "evidence_pack": [
+        {
+          "type": "Data",
+          "source_location": "her3_brand2013",
+          "quote": "n=1854, deviation=0.1409",
+          "basis": "原文",
+          "extra": null
+        }
+      ],
+      "detection_method": "Benford",
+      "confidence_score": 0.5,
+      "cross_references": [],
+      "related_entities": {}
+    }
+  ],
+  "internal_review": {
+    "no_findings_reason": null,
+    "hallucination_check": "所有结论基于确定性算法(GRIM/Benford/p-curve/pHash/ELA)与规则提取，无模型自由推断。",
+    "missing_info": "联网检测（DOI/撤稿核查）、NLI、批量扫描、PDF 报告为 Pro 扩展（paperdetective-pro），当前未安装；PDF 内嵌图片提取将在后续版本接入。",
+    "external_knowledge_disclaimer": "无",
+    "disclaimer": "检测结果是筛查信号而非法证定论，可能存在误报/漏报；不得作为对论文或作者学术不端的唯一判定依据，建议结合领域专家复核。"
+  }
+}
