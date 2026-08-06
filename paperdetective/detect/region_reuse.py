@@ -17,8 +17,13 @@ from PIL import Image
 
 from .image_manipulation import phash, hamming_distance
 
-# Panel must contain at least this fraction of non-background pixels to count.
-MIN_CONTENT_RATIO = 0.05
+# A tile must carry enough TEXTURE (grayscale std) to be a real panel.
+# Pure-white corners (which hash identically regardless of content) have std ~0
+# and are dropped; light western-blot panels with sparse bands keep a
+# meaningful std even though their dark-content fraction is tiny. Using std
+# instead of a content-ratio avoids dropping the very evidence we are hunting
+# (observed on the Yin et al. PLOS ONE cases: the duplicated panels are light).
+TEXTURE_MIN_STD = 6.0
 # Minimum gap (fraction of the axis) to split on.
 MIN_GAP_RATIO = 0.02
 # Minimum panel size in pixels (either axis) to keep.
@@ -26,11 +31,14 @@ MIN_PANEL_DIM = 48
 # Perceptual-hash hamming threshold for "near-duplicate" (tighter than the
 # whole-figure threshold: grid tiles are smaller, so identity is more decisive).
 DUPLICATE_THRESHOLD = 6
-# Minimum figure dimension to attempt the grid fallback (western-blot panels
-# are rarely separated by whitespace, so a 3x3 grid is used for large figures).
+# Minimum figure dimension to attempt grid splitting.
 GRID_FALLBACK_MIN_DIM = 240
-GRID_ROWS = 3
-GRID_COLS = 3
+# Multi-scale grid resolutions: panel layouts vary between papers (3x3 works
+# for one blot, 4x4 for another, and fine 6x8 for lane-level layouts), so
+# several resolutions are overlaid. Tiles that are near-uniform are dropped
+# before comparison. (6x8 caught the cross-figure duplication in the Pfizer
+# Yin et al. PLOS ONE cases that coarser grids miss.)
+GRID_RESOLUTIONS = [(3, 3), (4, 4), (6, 8)]
 
 
 def _content_mask(gray: np.ndarray, bg_threshold: int = 210) -> np.ndarray:
@@ -86,19 +94,21 @@ def split_panels(
 
     # Grid-first strategy for large figures: western-blot / gel panels are
     # rarely separated by clean whitespace (bands create fine white slivers that
-    # over-split), so a coarse 3x3 grid is a better panel prior. Whitespace
-    # projection is still used for small figures and as the 'whole' fallback.
+    # over-split), so coarse multi-scale grids are a better panel prior.
+    # Whitespace projection is still used for small figures and as fallback.
     if min(w, h) >= GRID_FALLBACK_MIN_DIM:
-        rows, cols = GRID_ROWS, GRID_COLS
-        cw, ch = w // cols, h // rows
         panels = []
-        for r in range(rows):
-            for c in range(cols):
-                tile = img.crop((c * cw, r * ch, min(w, (c + 1) * cw), min(h, (r + 1) * ch)))
-                tmask = _content_mask(np.asarray(tile.convert("L"), dtype=np.uint8))
-                if tmask.sum() / max(1, tmask.size) < MIN_CONTENT_RATIO:
-                    continue  # mostly empty corner: skip (all-white tiles hash identically)
-                panels.append((f"r{r + 1}c{c + 1}", tile))
+        for rows, cols in GRID_RESOLUTIONS:
+            cw, ch = w // cols, h // rows
+            if cw < min_panel or ch < min_panel:
+                continue
+            for r in range(rows):
+                for c in range(cols):
+                    tile = img.crop((c * cw, r * ch, min(w, (c + 1) * cw), min(h, (r + 1) * ch)))
+                    tgray = np.asarray(tile.convert("L"), dtype=np.float32)
+                    if tgray.std() < TEXTURE_MIN_STD:
+                        continue  # near-uniform (pure-white corner): hashes identically
+                    panels.append((f"g{rows}x{cols}_{r + 1}c{c + 1}", tile))
         if panels:
             return panels
 
@@ -112,11 +122,24 @@ def split_panels(
             if pw < min_panel or ph < min_panel:
                 continue
             crop = band_mask[:, c0:c1]
-            if crop.sum() / max(1, crop.size) < MIN_CONTENT_RATIO:
+            if crop.sum() / max(1, crop.size) < 0.05:
                 continue  # mostly empty margin
             panels.append((f"r{ri}c{ci}", img.crop((c0, r0, c1, r1))))
 
     return panels or [("whole", img.copy())]
+
+
+# Per-resolution thresholds: fine grids (6x8) over-segment blots into small
+# tiles, so identity there must be much stricter (<= 3) to stay precise; the
+# coarse grids keep the default threshold.
+FINE_GRID_THRESHOLD = 3
+
+
+def _pair_threshold(panel_a: str, panel_b: str, default: int) -> int:
+    """Stricter threshold when either panel comes from a fine grid tile."""
+    if "g6x8" in panel_a or "g6x8" in panel_b:
+        return FINE_GRID_THRESHOLD
+    return default
 
 
 def detect_panel_reuse(
@@ -126,9 +149,9 @@ def detect_panel_reuse(
     """Find near-duplicate panels across *different* source locations.
 
     Compares panel hashes for all figures in `images`. A pair is reported when
-    their perceptual hashes differ by <= `threshold` and the two panels do NOT
-    come from the same crop of the same figure (i.e. they are from different
-    figures, or from different panels of the same figure).
+    their perceptual hashes differ by <= `threshold` (per-resolution) and the
+    two panels do NOT come from the same crop of the same figure (i.e. they are
+    from different figures, or from different panels of the same figure).
 
     Returns a list of dicts:
         {"figure_a", "panel_a", "figure_b", "panel_b", "distance"}
@@ -145,7 +168,7 @@ def detect_panel_reuse(
             if a["figure"] == b["figure"] and a["panel"] == b["panel"]:
                 continue
             dist = hamming_distance(a["hash"], b["hash"])
-            if dist <= threshold:
+            if dist <= _pair_threshold(a["panel"], b["panel"], threshold):
                 pairs.append({
                     "figure_a": a["figure"],
                     "panel_a": a["panel"],
