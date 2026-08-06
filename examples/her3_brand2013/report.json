@@ -2,22 +2,24 @@
   "analysis_metadata": {
     "papers": [
       {
-        "title": "her3_brand2013",
+        "title": "paper",
         "authors": null,
         "journal_or_source": null,
         "publication_year": null,
-        "input_id": "her3_brand2013"
+        "input_id": "paper"
       }
     ],
-    "analysis_timestamp": "2026-08-06T10:07:59.115937+00:00",
+    "analysis_timestamp": "2026-08-06T10:20:09.595284+00:00",
     "agent_version": "PaperDetective v1.0",
     "processing_status": "success",
     "reference_basis_provided": false,
     "mode": "free",
     "detectors_run": [
+      "BandELA",
       "Benford",
       "ELA",
       "GRIM",
+      "RegionReuse",
       "pHash"
     ]
   },
@@ -33,7 +35,7 @@
       "evidence_pack": [
         {
           "type": "Data",
-          "source_location": "her3_brand2013",
+          "source_location": "paper",
           "quote": "n=1854, deviation=0.1409",
           "basis": "原文",
           "extra": null
@@ -41,6 +43,28 @@
       ],
       "detection_method": "Benford",
       "confidence_score": 0.5,
+      "cross_references": [],
+      "related_entities": {}
+    },
+    {
+      "id": "FD-002",
+      "finding_type": [
+        "Image_Manipulation"
+      ],
+      "title": "子图面板高度相似（疑似面板级复用/拼接）",
+      "description": "图 page6_Im3.png 的面板 r3c1 与 图 page6_Im3.png 的面板 r3c2 感知哈希几乎一致（hamming=6），提示同一面板可能被复用或拼接。",
+      "severity": "High",
+      "evidence_pack": [
+        {
+          "type": "Visual",
+          "source_location": "paper",
+          "quote": "page6_Im3.png[r3c1] ≈ page6_Im3.png[r3c2]",
+          "basis": "原文",
+          "extra": null
+        }
+      ],
+      "detection_method": "RegionReuse",
+      "confidence_score": 0.9,
       "cross_references": [],
       "related_entities": {}
     }
