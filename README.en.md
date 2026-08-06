@@ -5,7 +5,7 @@
 
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-99%20passed-brightgreen)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-111%20passed-brightgreen)](#-tests)
 [![CI](https://github.com/Zensoro/paperdetective/actions/workflows/ci.yml/badge.svg)](https://github.com/Zensoro/paperdetective/actions/workflows/ci.yml)
 
 > ⚖️ **Disclaimer**: results are **screening signals**, not forensic proof. False positives and false negatives are possible; do not use this tool as the sole basis for accusing a paper or author of misconduct. Always corroborate with domain experts.
@@ -17,14 +17,14 @@
 | Module | Method | Evidence level | Mode |
 | --- | --- | --- | --- |
 | Data fabrication | **GRIM** (mean × sample-size integer consistency), Benford's first-digit law, p-curve | Hard / Soft | 🆓 Free |
-| Image manipulation | pHash perceptual hashing (whole-figure reuse), **RegionReuse** (panel-level reuse via multi-scale grids + texture filtering + tiered thresholds), ELA error-level analysis, **BandELA** (per-lane error analysis) | Hard / Soft | 🆓 Free |
+| Image manipulation | pHash perceptual hashing (whole-figure reuse), **RegionReuse** (panel-level reuse via multi-scale grids + texture filtering + tiered thresholds), ELA error-level analysis, **BandELA** (per-lane error analysis), **LaneReuse** (lane-level duplication via Pearson-correlation + pixel-diff double gate) | Hard / Soft | 🆓 Free |
 | Cross-paper duplication | Cross-document pHash comparison, data fingerprints | Hard | 🆓 Free |
 | Citation fraud | DOI format check + doi.org existence resolution | Hard | 💎 PRO |
 | Retraction flags | Retraction keyword / metadata cross-check (pluggable) | Hard | 💎 PRO |
 | Internal inconsistency | Relative-deviation comparison of numerical claims (NLI pluggable) | Soft | 🆓 Free |
 
 - **Deterministic algorithms** — every conclusion comes from deterministic rules; no free-form model inference, no hallucination risk.
-- **Case-driven development** — detectors are iterated against officially confirmed fraud cases (ORI / Rice investigation / Pfizer statements); the [8-case verification matrix](docs/case-studies/corpus-2026-08.en.md) ensures high-confidence hits land on officially confirmed locations.
+- **Case-driven development** — detectors are iterated against officially confirmed fraud cases (ORI / Rice investigation / Pfizer statements); the [8-case verification matrix](docs/case-studies/corpus-2026-08.en.md) ensures high-confidence hits land on officially confirmed locations. **Independent control papers** (method/meta-analysis papers with no WB figures, never used in tuning) validate the false-positive rate.
 - **Layered confidence engine** — hard evidence ≥ 0.85; soft signals corroborated; internal knowledge capped at 0.60.
 - **Strict schema** — Pydantic-validated JSON report; pretty Markdown export.
 - **Batch processing** — directory input; one file failing won't break the batch.
@@ -102,23 +102,28 @@ Pro extensions live in their own repo (`paperdetective-pro`, private/paid). Once
 ## ✅ Tests
 
 ```bash
-python -m pytest        # 99 tests
+python -m pytest        # 111 tests
 ```
 
 ## 📚 Corpus
 
 Detectors are driven by **officially confirmed** real fraud cases (case-driven development):
 
-| Case | Source | RegionReuse hit |
-| --- | --- | --- |
-| Brand et al. 2013 (HER3 western-blot) | ORI | ✅ Fig6↔Fig7 d=0 exact duplicate |
-| Lukianova-Hleb et al. 2012 (plasmonic nanobubbles) | Rice investigation | ✅ Fig3 internal duplicates |
-| Yin et al. 2012 (PDK-1) | Pfizer statement | ✅ Fig1/Fig2 cross-figure duplicate |
-| Yin & Nassirpour 2013 (miR-221) | Pfizer statement | ⚠️ MISS (lane-level duplication misaligned with grid) |
-| Bo-Yu et al. 2014 (ANGPTL4) | ORI | ✅ |
-| Bo-Yu et al. 2013 (dendritic) | ORI | ✅ |
-| Lipid 2014 (PLoS ONE 11:111253) | retracted | ✅ |
-| ZMARF 2014 (PLoS ONE 9:94830) | retracted | ✅ |
+| Case | Source | RegionReuse hit | LaneReuse hit |
+| --- | --- | --- | --- |
+| Brand et al. 2013 (HER3 western-blot) | ORI | ✅ Fig6↔Fig7 d=0 exact duplicate | ✅ 15 clusters (51 pairs) cross-figure |
+| Lukianova-Hleb et al. 2012 (plasmonic nanobubbles) | Rice investigation | ✅ Fig3 internal duplicates | ✅ 4 clusters |
+| Yin et al. 2012 (PDK-1) | Pfizer statement | ✅ Fig1/Fig2 cross-figure duplicate | ✅ 2 clusters |
+| Yin & Nassirpour 2013 (miR-221) | Pfizer statement | ⚠️ MISS (lane-level duplication misaligned with grid) | ✅ **2 clusters** (Fig6 b6 lanes 2/5/8 triple + 3/9) |
+| Bo-Yu et al. 2014 (ANGPTL4) | ORI | ✅ | ✅ 15 clusters (38 pairs; biggest 11 lanes across 3 figures) |
+| Bo-Yu et al. 2013 (dendritic) | ORI | ✅ | ✅ 12 clusters |
+| Lipid 2014 (PLoS ONE 11:111253) | retracted | ✅ | ✅ 1 cluster |
+| ZMARF 2014 (PLoS ONE 9:94830) | retracted | ✅ | ✅ 13 clusters |
+
+**LaneReuse hits 8/8** — including the case RegionReuse missed: the "duplicated bands
+inside western blots" Pfizer confirmed for miR-221 (Fig6 lane triple) is caught by
+lane-level comparison. Control set (3 method/meta-analysis papers without WB figures,
+independent of tuning): **zero false positives**.
 
 → Full matrix, hit/miss analysis, and reproduction commands:
 [docs/case-studies/corpus-2026-08.en.md](docs/case-studies/corpus-2026-08.en.md)
@@ -134,6 +139,7 @@ See [docs/case-studies/her3-brand-2013.md](docs/case-studies/her3-brand-2013.md)
 - [x] RegionReuse panel-level image forensics (v0.4.0 — caught the ORI-confirmed fabrication in the [case study](docs/case-studies/her3-brand-2013.md))
 - [x] RegionReuse v2: multi-scale grids + texture filtering + tiered thresholds (v0.5.0 — 7/8 hits on the [fraud corpus](docs/case-studies/corpus-2026-08.en.md))
 - [x] BandELA per-lane error-level analysis (v0.4.0)
+- [x] LaneReuse lane-level duplication detection (v0.6.0 — corr + pixel-diff gates, hit clustering, control-set validation; 8/8 fraud hits)
 - [ ] Full SPRITE integration into the pipeline
 - [ ] PRO: Retraction-database cross-check (Retraction Watch / Crossref)
 - [ ] PRO: NLI-based internal-inconsistency (pluggable LLM)
