@@ -8,6 +8,8 @@ from .ingest import Document
 from .schemas import AnalysisResult, Finding, EvidencePack, InternalReview
 from .detect.data_fabrication import grim_test, benford_analysis, p_curve_analysis
 from .detect.image_manipulation import ela_score, detect_reuse
+from .detect.region_reuse import detect_panel_reuse
+from .detect.band_ela import band_ela_scan
 from .detect.internal_inconsistency import extract_numbers
 from .detect.cross_paper import find_cross_paper_duplicates
 from .plugins import load_pro_extensions, ProContext
@@ -27,7 +29,7 @@ BENFORD_MIN_SAMPLE = 20
 P_CURVE_MIN_SAMPLE = 10
 
 # 免费核心包含的检测方法（pro 能力由 paperdetective-pro 扩展提供）
-FREE_METHODS = {"GRIM", "SPRITE", "Benford", "p-curve", "pHash", "ELA"}
+FREE_METHODS = {"GRIM", "SPRITE", "Benford", "p-curve", "pHash", "ELA", "RegionReuse", "BandELA"}
 
 
 def _find_grim_claims(text: str) -> list[dict]:
@@ -143,6 +145,30 @@ def run_detection(docs: list[Document], pro: bool = False, license_key: str | No
                     confidence_score=confidence_score(evidence=["pHash"]),
                 )
 
+        # --- 面板级复用 RegionReuse (FREE, hard evidence) ---
+        # 整图 pHash 看不到子图/面板级复用（如 western blot 面板被复制/挪动）。
+        # 将每张图按空白投影切成面板后分别哈希，跨图/跨面板比对。
+        if doc.images:
+            detectors_run.append("RegionReuse")
+            for hit in detect_panel_reuse(dict(doc.images)):
+                _mk_finding(
+                    findings,
+                    finding_type=["Image_Manipulation"],
+                    title="子图面板高度相似（疑似面板级复用/拼接）",
+                    description=(
+                        f"图 {hit['figure_a']} 的面板 {hit['panel_a']} 与 "
+                        f"图 {hit['figure_b']} 的面板 {hit['panel_b']} 感知哈希几乎一致"
+                        f"（hamming={hit['distance']}），提示同一面板可能被复用或拼接。"
+                    ),
+                    severity="High",
+                    evidence_pack=[EvidencePack(
+                        type="Visual", source_location=doc.paper_id,
+                        quote=f"{hit['figure_a']}[{hit['panel_a']}] ≈ {hit['figure_b']}[{hit['panel_b']}]",
+                        basis="原文")],
+                    detection_method="RegionReuse",
+                    confidence_score=confidence_score(evidence=["RegionReuse"]),
+                )
+
         # --- ELA (FREE, soft signal) ---
         if doc.images:
             detectors_run.append("ELA")
@@ -164,6 +190,32 @@ def run_detection(docs: list[Document], pro: bool = False, license_key: str | No
                             quote=f"ela_score={ela['ela_score']}", basis="原文")],
                         detection_method="ELA",
                         confidence_score=confidence_score(evidence=["ELA"]),
+                    )
+
+        # --- 条带级 ELA BandELA (FREE, soft signal) ---
+        # 按水平条带(泳道)分别做 ELA；被拼接/挪动的泳道与相邻未编辑泳道的
+        # 重压缩误差特征不同，表现为相对整图条带中位数的异常高值。
+        if doc.images:
+            detectors_run.append("BandELA")
+            for img_id, img in doc.images:
+                scan = band_ela_scan(img)
+                for lane in scan["flagged"]:
+                    _mk_finding(
+                        findings,
+                        finding_type=["Image_Manipulation"],
+                        title="条带级 ELA 异常（疑似局部拼接/编辑）",
+                        description=(
+                            f"图片 {img_id} 的第 {lane['band']} 条带 ELA 均值 "
+                            f"{lane['ela_score']:.2f}（整图条带中位数 {scan['median_ela']:.2f}），"
+                            "提示该条带可能被单独编辑过。"
+                        ),
+                        severity="Medium",
+                        evidence_pack=[EvidencePack(
+                            type="Visual", source_location=doc.paper_id,
+                            quote=f"band={lane['band']}, ela={lane['ela_score']:.2f}, median={scan['median_ela']:.2f}",
+                            basis="原文")],
+                        detection_method="BandELA",
+                        confidence_score=confidence_score(evidence=["BandELA"]),
                     )
 
         # --- PRO 扩展（联网检测，仅当安装 paperdetective-pro 时启用）---
