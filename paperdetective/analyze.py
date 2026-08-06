@@ -10,6 +10,7 @@ from .detect.data_fabrication import grim_test, benford_analysis, p_curve_analys
 from .detect.image_manipulation import ela_score, detect_reuse
 from .detect.region_reuse import detect_panel_reuse
 from .detect.band_ela import band_ela_scan
+from .detect.lane_reuse import cluster_lane_hits, detect_lane_reuse
 from .detect.internal_inconsistency import extract_numbers
 from .detect.cross_paper import find_cross_paper_duplicates
 from .plugins import load_pro_extensions, ProContext
@@ -29,7 +30,7 @@ BENFORD_MIN_SAMPLE = 20
 P_CURVE_MIN_SAMPLE = 10
 
 # 免费核心包含的检测方法（pro 能力由 paperdetective-pro 扩展提供）
-FREE_METHODS = {"GRIM", "SPRITE", "Benford", "p-curve", "pHash", "ELA", "RegionReuse", "BandELA"}
+FREE_METHODS = {"GRIM", "SPRITE", "Benford", "p-curve", "pHash", "ELA", "RegionReuse", "BandELA", "LaneReuse"}
 
 
 def _find_grim_claims(text: str) -> list[dict]:
@@ -217,6 +218,53 @@ def run_detection(docs: list[Document], pro: bool = False, license_key: str | No
                         detection_method="BandELA",
                         confidence_score=confidence_score(evidence=["BandELA"]),
                     )
+
+        # --- 泳道级重复 LaneReuse (FREE, hard evidence) ---
+        # 固定网格切不到"条带被复制到另一泳道"的造假（Pfizer 认定的 Yin 案例
+        # 即为此类）。把图切成水平带(膜)再切成竖直泳道，逐泳道做像素级比对：
+        # 相关系数门控 + 像素差异确认，双重判据压制误报。
+        # 同一伪造泳道常被复制到多个目标（星形网络），逐对输出会把 62 个
+        # 证据对变成 62 条 finding；先做连通聚类，每个"重复泳道网络"只报一条。
+        if doc.images:
+            detectors_run.append("LaneReuse")
+            hits = detect_lane_reuse(dict(doc.images))
+            for cl in cluster_lane_hits(hits):
+                p = cl["best_pair"]
+                n_mem, n_pairs = cl["n_members"], cl["n_pairs"]
+                if n_mem == 2 and n_pairs == 1:
+                    title = "泳道像素级几乎一致（疑似条带被复制/重复使用）"
+                    desc_head = (
+                        f"图 {p['figure_a']} 第 {p['band_a']} 带第 {p['lane_a']} 泳道 "
+                        f"(x={p['box_a'][0]}-{p['box_a'][2]}) 与 "
+                        f"图 {p['figure_b']} 第 {p['band_b']} 带第 {p['lane_b']} 泳道 "
+                        f"(x={p['box_b'][0]}-{p['box_b'][2]})"
+                    )
+                else:
+                    title = "多条泳道像素级几乎一致（疑似同一条带被复制成簇）"
+                    figs = "、".join(cl["figures"])
+                    desc_head = (
+                        f"共 {n_mem} 条泳道（图 {figs}）两两像素高度相似，"
+                        f"形成 {n_pairs} 个证据对；最强证据："
+                        f"图 {p['figure_a']} 第 {p['band_a']} 带第 {p['lane_a']} 泳道 ↔ "
+                        f"图 {p['figure_b']} 第 {p['band_b']} 带第 {p['lane_b']} 泳道"
+                    )
+                _mk_finding(
+                    findings,
+                    finding_type=["Image_Manipulation"],
+                    title=title,
+                    description=(
+                        f"{desc_head} 像素相关系数 {p['correlation']}、"
+                        f"像素中位差 {p['pixel_diff']}，提示条带可能被复制到不同泳道。"
+                    ),
+                    severity="High",
+                    evidence_pack=[EvidencePack(
+                        type="Visual", source_location=doc.paper_id,
+                        quote=f"cluster=({cl['n_members']} lanes/{cl['n_pairs']} pairs), "
+                              f"corr={p['correlation']}, diff={p['pixel_diff']}",
+                        basis="原文")],
+                    detection_method="LaneReuse",
+                    confidence_score=confidence_score(evidence=["LaneReuse"]),
+                )
 
         # --- PRO 扩展（联网检测，仅当安装 paperdetective-pro 时启用）---
         if pro:
