@@ -1,11 +1,10 @@
-**简体中文** | [**English**](README.en.md)
 # 🔍 PaperDetective
 
 **论文内容级学术打假检测器** — 对论文进行数据造假、图片操纵、引用造假、撤稿标记、内文自悖、跨论文重复六类信号筛查，输出严格的结构化报告。
 
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-97%20passed-brightgreen)](#-测试)
+[![Tests](https://img.shields.io/badge/tests-99%20passed-brightgreen)](#-测试)
 
 > ⚖️ **免责声明**：本工具的检测结果是**筛查信号**而非法证定论，可能存在误报/漏报；不得作为对论文或作者学术不端的唯一判定依据，请务必结合领域专家复核。
 
@@ -16,13 +15,14 @@
 | 检测模块 | 方法 | 证据级别 | 运行模式 |
 | --- | --- | --- | --- |
 | 数据造假 | **GRIM**（均值×样本量整数一致性）、Benford 首位分布、p-curve | 硬证据 / 软信号 | 🆓 Free |
-| 图片操纵 | pHash 感知哈希（整图复用）、**RegionReuse**（3x3 网格+空白投影的面板级复用）、ELA 错误水平分析、**BandELA**（逐泳道误差分析） | 硬证据 / 软信号 | 🆓 Free |
+| 图片操纵 | pHash 感知哈希（文内图复用）、ELA 错误水平分析、**RegionReuse** 面板级复用（多尺度网格）、**BandELA** 条带级错误水平分析 | 硬证据 / 软信号 | 🆓 Free |
 | 跨论文重复 | 跨文档 pHash 比对、数据指纹 | 硬证据 | 🆓 Free |
 | 引用造假 | DOI 格式校验 + doi.org 存在性解析 | 硬证据 | 💎 PRO 扩展 |
 | 撤稿标记 | 撤稿关键词 / 元数据交叉核查（可插拔） | 硬证据 | 💎 PRO 扩展 |
 | 内文自悖 | 数值主张相对偏差比较（NLI 可插拔） | 软信号 | 🆓 Free |
 
 - **确定性算法**：所有结论基于确定性算法与规则提取，无模型自由推断，无幻觉风险
+- **案例驱动开发**：检测器由官方认定的真实造假案例（ORI / Rice 调查 / Pfizer 声明）驱动迭代，[8 案例验证矩阵](docs/case-studies/corpus-2026-08.md) 保证高置信命中对应官方认定位置
 - **分层置信度引擎**：硬证据 0.85+，软信号按 corroboration 分层，内部知识一律封顶 0.60
 - **严格 schema**：输出 Pydantic 校验的 JSON 报告，同时支持美化 Markdown 导出
 - **批量处理**：支持目录输入，单文件失败不影响整批
@@ -105,14 +105,31 @@ NLI、批量扫描、报告导出，注册 `paperdetective.pro` entry-point 后�
 ## ✅ 测试
 
 ```bash
-python -m pytest        # 97 项测试
+python -m pytest        # 99 项测试
 ```
+
+## 📚 案例库
+
+检测器由**官方认定的真实造假论文**驱动迭代（案例驱动开发）：
+
+| 案例 | 来源 | RegionReuse 命中 |
+| --- | --- | --- |
+| Brand et al. 2013 (HER3 western-blot) | ORI 认定 | ✅ Fig6↔Fig7 d=0 精确重复 |
+| Lukianova-Hleb et al. 2012 (plasmonic nanobubbles) | Rice 调查 | ✅ Fig3 内部重复 |
+| Yin et al. 2012 (PDK-1) | Pfizer 声明 | ✅ Fig1/Fig2 跨图重复 |
+| Yin & Nassirpour 2013 (miR-221) | Pfizer 声明 | ⚠️ 漏检（带级重复不对齐网格） |
+| Bo-Yu et al. 2014 (ANGPTL4) | ORI 认定 | ✅ |
+| Bo-Yu et al. 2013 (dendritic) | ORI 认定 | ✅ |
+| Lipid 2014 (PLoS ONE 11:111253) | 撤稿 | ✅ |
+| ZMARF 2014 (PLoS ONE 9:94830) | 撤稿 | ✅ |
+
+→ 完整矩阵与命中/漏检分析见 [docs/case-studies/corpus-2026-08.md](docs/case-studies/corpus-2026-08.md)
 
 ## 🗺️ Roadmap
 
-- [x] PDF 内嵌图片自动提取（v0.4.0，含页面占位图自动过滤）
-- [x] RegionReuse 面板级图片取证（v0.4.0——[案例](docs/case-studies/her3-brand-2013.md)中命中 ORI 认定的伪造面板）
-- [x] BandELA 条带级错误水平分析（v0.4.0）
+- [x] PDF 内嵌图片自动提取
+- [x] RegionReuse 面板级图片取证（多尺度网格 + 纹理过滤）
+- [x] BandELA 条带级错误水平分析
 - [ ] SPRITE 完整实现接入管线
 - [ ] Pro 扩展：撤稿数据库（Retraction Watch / Crossref）交叉核查
 - [ ] Pro 扩展：NLI 内文自悖（LLM 可插拔）
