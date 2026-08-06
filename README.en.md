@@ -5,7 +5,7 @@
 
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-86%20passed-brightgreen)](#-tests)
+[![Tests](https://img.shields.io/badge/tests-97%20passed-brightgreen)](#-tests)
 [![CI](https://github.com/Zensoro/paperdetective/actions/workflows/ci.yml/badge.svg)](https://github.com/Zensoro/paperdetective/actions/workflows/ci.yml)
 
 > ⚖️ **Disclaimer**: results are **screening signals**, not forensic proof. False positives and false negatives are possible; do not use this tool as the sole basis for accusing a paper or author of misconduct. Always corroborate with domain experts.
@@ -17,7 +17,7 @@
 | Module | Method | Evidence level | Mode |
 | --- | --- | --- | --- |
 | Data fabrication | **GRIM** (mean × sample-size integer consistency), Benford's first-digit law, p-curve | Hard / Soft | 🆓 Free |
-| Image manipulation | pHash perceptual hashing (within-paper figure reuse), ELA error-level analysis (local manipulation clustering) | Hard / Soft | 🆓 Free |
+| Image manipulation | pHash perceptual hashing (whole-figure reuse), **RegionReuse** (panel-level reuse via 3x3-grid + whitespace panel splitting), ELA error-level analysis, **BandELA** (per-lane error analysis) | Hard / Soft | 🆓 Free |
 | Cross-paper duplication | Cross-document pHash comparison, data fingerprints | Hard | 🆓 Free |
 | Citation fraud | DOI format check + doi.org existence resolution | Hard | 💎 PRO |
 | Retraction flags | Retraction keyword / metadata cross-check (pluggable) | Hard | 💎 PRO |
@@ -111,7 +111,9 @@ See [docs/case-studies/her3-brand-2013.md](docs/case-studies/her3-brand-2013.md)
 ## 🗺️ Roadmap
 
 - [x] CI (GitHub Actions, green)
-- [ ] Automatic embedded-image extraction from PDFs
+- [x] Automatic embedded-image extraction from PDFs (v0.4.0, incl. page-furniture auto-filter)
+- [x] RegionReuse panel-level image forensics (v0.4.0 — caught the ORI-confirmed fabrication in the [case study](docs/case-studies/her3-brand-2013.md))
+- [x] BandELA per-lane error-level analysis (v0.4.0)
 - [ ] Full SPRITE integration into the pipeline
 - [ ] PRO: Retraction-database cross-check (Retraction Watch / Crossref)
 - [ ] PRO: NLI-based internal-inconsistency (pluggable LLM)
