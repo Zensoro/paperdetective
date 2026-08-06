@@ -1,3 +1,27 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/).
+
+## [0.5.0] - 2026-08-06
+
+### Changed
+- **RegionReuse 重写：多尺度网格 + 纹理过滤 + 分档阈值**。8 个官方认定造假案例（ORI / Rice 调查 / Pfizer 声明）驱动的升级：
+  - **纹理方差过滤**：弃用内容占比阈值（`MIN_CONTENT_RATIO`），改用灰度标准差（`TEXTURE_MIN_STD=6.0`）。浅色 western-blot 面板虽暗色像素占比极小，但纹理方差显著，不再被误当空白丢弃——这是 v0.4.0 漏检 Yin et al. PLOS ONE 案例的根因
+  - **多尺度网格**：`GRID_RESOLUTIONS = [(3,3),(4,4),(6,8)]` 叠加切分。面板布局因论文而异，6×8 细网格能抓到跨图条带级重复（Pfizer 认定的 Yin et al. 2012 PDK-1 Fig1/Fig2 重复即由此命中）
+  - **分档阈值**：6×8 细网格 tile 更小、噪声更多，hamming 阈值收紧至 ≤3；粗网格维持 ≤6。实证：单一阈值下 6×8 引入大量跨图假命中，分档后 7/8 案例命中且高置信命中正对应官方认定位置
+- **案例驱动验证矩阵**：新增 8 篇官方认定造假论文（Brand 2013 / Lukianova-Hleb 2012 / Yin×2 / Bo-Yu×2 / Lipid 2014 / ZMARF 2014）全量回放，RegionReuse 在 7/8 案例命中（唯一漏检为 miR-221 案例的带级重复不对齐网格），高置信命中均落在 ORI/Rice/Pfizer 认定位置（如 Brand Fig6↔Fig7 d=0 精确重复）
+
+### Added
+- 案例库文档：`docs/case-studies/corpus-2026-08.md`（8 案例矩阵、来源、命中/漏检分析）
+
+### Fixed
+- 版本号不一致：`__init__.py` 落后于 `pyproject.toml`，统一为 0.5.0
+
+### Tests
+- 99 项全绿（RegionReuse 新增多尺度网格 / 纹理过滤 / 分档阈值 3 项测试）
+
 ## [0.4.0] - 2026-08-06
 
 ### Added
@@ -11,11 +35,6 @@
 
 ### Tests
 - 97 项（新增 region_reuse / band_ela / furniture-filter 测试）
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/).
 
 ## [0.3.0] - 2026-08-04
 
