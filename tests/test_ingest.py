@@ -35,3 +35,23 @@ def test_ingest_path_unsupported_raises(tmp_path):
     f.write_text("unsupported")
     with pytest.raises(ValueError):
         ingest_path(str(f))
+
+
+def test_filter_furniture_drops_page_raster_and_keeps_figures():
+    """page furniture (same content on every page) must be dropped."""
+    import numpy as np
+    from paperdetective.ingest import _filter_furniture
+    # simulate: 3 pages, same 2000x3000 raster on each page + 2 distinct figures
+    rng = np.random.default_rng(3)
+    page_img = Image.fromarray(np.full((300, 200, 3), 255, dtype=np.uint8))
+    fig_a = Image.fromarray(rng.integers(0, 255, (200, 200, 3), dtype=np.uint8))
+    fig_b = Image.fromarray(rng.integers(0, 255, (200, 200, 3), dtype=np.uint8))
+    images = [
+        ("page1_X0.png", page_img), ("page1_Im1.png", fig_a),
+        ("page2_X0.png", page_img), ("page2_Im2.png", fig_b),
+        ("page3_X0.png", page_img),
+    ]
+    kept = _filter_furniture(images)
+    ids = [i for i, _ in kept]
+    assert "page1_X0.png" not in ids and "page2_X0.png" not in ids
+    assert "page1_Im1.png" in ids and "page2_Im2.png" in ids
