@@ -10,8 +10,8 @@ FINDING_TYPES = [
 ]
 
 DETECTION_METHODS = [
-    "GRIM", "SPRITE", "p-curve", "Benford", "ELA", "PRNU", "pHash",
-    "Embedding", "DOI_Check", "Retraction_Check", "NLI", "CrossCheck",
+    "GRIM", "SPRITE", "p-curve", "Benford", "ELA", "BandELA", "PRNU", "pHash",
+    "RegionReuse", "Embedding", "DOI_Check", "Retraction_Check", "NLI", "CrossCheck",
     "ChartReconstruct", "Manual",
 ]
 
