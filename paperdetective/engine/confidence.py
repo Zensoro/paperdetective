@@ -9,9 +9,9 @@ Anything relying on unverified internal knowledge is capped at 0.60.
 """
 from __future__ import annotations
 
-HARD_EVIDENCE = {"GRIM", "SPRITE", "PRNU", "DOI_Check", "Retraction_Check", "pHash"}
+HARD_EVIDENCE = {"GRIM", "SPRITE", "PRNU", "DOI_Check", "Retraction_Check", "pHash", "RegionReuse"}
 SOFT_SIGNAL = {
-    "p-curve", "Benford", "ELA", "Embedding", "NLI", "CrossCheck",
+    "p-curve", "Benford", "ELA", "BandELA", "Embedding", "NLI", "CrossCheck",
     "ChartReconstruct",
 }
 
