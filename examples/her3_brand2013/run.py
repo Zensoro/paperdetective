@@ -1,18 +1,18 @@
-"""Reproducibility wrapper for the Brand 2013 case study.
+"""Reproducibility wrapper for the Brand 2013 case study (PaperDetective >= 0.4.0).
 
-Downloads the original PLoS article PDF if not already present, filters out
-shared full-page rasters + logos (paperdetective ingestion limitation discovered
-during this case study), then runs the full free-tier detector pipeline.
+Downloads the original PLoS article PDF if not already present, then runs the
+free-tier pipeline *as-is*: the fixed `ingest_path` extracts embedded figures
+AND auto-filters the shared full-page rasters that journal "printable" PDFs
+embed on every page (previously a 100+ false-positive cascade).
 
 Usage:
     python run.py            # writes report.json + report.md alongside this script
 """
 from __future__ import annotations
-import io, sys, urllib.request
+import sys, urllib.request
 from pathlib import Path
-from pypdf import PdfReader
-from PIL import Image
-from paperdetective.ingest import Document
+
+from paperdetective.ingest import ingest_path
 from paperdetective.analyze import run_detection
 from paperdetective.report import to_markdown
 
@@ -25,22 +25,8 @@ if not PDF.exists():
     print(f"downloading {URL} -> {PDF} ...", file=sys.stderr)
     urllib.request.urlretrieve(URL, PDF)
 
-reader = PdfReader(str(PDF))
-text   = "\n".join((p.extract_text() or "") for p in reader.pages)
-# Filter out shared full-page rasters + tiny logos (PLoS printable quirk)
-images = []
-for pi, page in enumerate(reader.pages):
-    for im in page.images:
-        name = im.name
-        if name.startswith("X0") or name.startswith("Form"):
-            continue
-        try:
-            images.append((f"p{pi+1}_{name}", Image.open(io.BytesIO(im.data)).convert("RGB")))
-        except Exception:
-            pass
-
-print(f"text {len(text)} chars; substantive figures {len(images)}", file=sys.stderr)
-doc = Document(paper_id="her3_brand2013", text=text, images=images)
+doc = ingest_path(str(PDF))  # 0.4.0: extracts figures + drops page furniture
+print(f"ingested {len(doc.images)} figure images from PDF", file=sys.stderr)
 result = run_detection([doc], pro=False)
 
 (HERE / "report.json").write_text(result.model_dump_json(indent=2), encoding="utf-8")
@@ -52,3 +38,5 @@ print(f"detectors_run: {result.analysis_metadata.get('detectors_run')}")
 print(f"findings: {len(finds)}")
 for f in finds:
     print(f"  [{f.severity}] {f.detection_method} conf={f.confidence_score} | {f.title}")
+    for e in f.evidence_pack[:1]:
+        print(f"      {e.quote[:110]}")
