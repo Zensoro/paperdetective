@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **`paperdetective.tools.dump_lane_dataset`**：用确定性 LaneReuse 检测器作**高置信自动标注器**，把语料库每篇 PDF 的每个 western-blot 泳道切出并打标，导出可训练数据集。三类标签 `duplicate` / `clean_lane` / `rejected`，按 `fraud` / `control` 分 split（对照组留作测试集）；产出 `images/*.png` + `manifest.csv`（几何/熵/能量/最相关 corr 等特征）+ `pairs.csv`（真实重复对作正样本、同论文 clean↔clean 抽样作负样本，供孪生网络训练）。这是"为将来神经网络"铺路的第一步——在尚无 100+ 标注样本前，先让确定性算法自动攒数据。详见 `paperdetective/tools/README.md`。
+
 ## [0.6.0] - 2026-08-06
 
 ### Added
