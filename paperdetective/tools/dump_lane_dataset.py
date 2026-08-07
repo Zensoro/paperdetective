@@ -189,11 +189,39 @@ def build_pairs(records: list[dict], hit_pairs: list[tuple[str, str, float]],
     return pairs
 
 
+# ``clean/`` predates the multi-split layout and is kept as an alias so existing
+# corpora keep producing the ``control`` split.
+SPLIT_ALIASES = {"clean": "control"}
+
+
+def discover_corpus(corpus: Path) -> list[tuple[Path, str]]:
+    """Map every PDF under ``corpus`` to the split it belongs to.
+
+    Top-level PDFs form the ``fraud`` split: papers where an official body
+    (ORI, an institutional investigation, a sponsor statement) identified the
+    manipulated figures one by one. Every subdirectory becomes its own split, so
+    weaker labels never get silently promoted to that gold standard — e.g.
+    ``retracted/`` holds papers retracted for image problems where no per-figure
+    finding was published, and ``clean/`` holds the negative controls.
+    """
+    if not corpus.is_dir():
+        return []
+    items: list[tuple[Path, str]] = []
+    for pdf in sorted(corpus.glob("*.pdf")):
+        items.append((pdf, "fraud"))
+    for sub in sorted(p for p in corpus.iterdir() if p.is_dir()):
+        split = SPLIT_ALIASES.get(sub.name, sub.name)
+        for pdf in sorted(sub.glob("*.pdf")):
+            items.append((pdf, split))
+    return items
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--corpus", required=True, type=Path,
-                    help="Directory of fraud PDFs (a clean/ subdir = control papers).")
+                    help="Directory of fraud PDFs; each subdirectory is its own "
+                         "split (clean/ = control).")
     ap.add_argument("--out", required=True, type=Path, help="Output dataset directory.")
     ap.add_argument("--min-h", type=int, default=lr.LANE_MIN_H)
     ap.add_argument("--min-ent", type=float, default=lr.LANE_MIN_ENTROPY)
@@ -203,11 +231,8 @@ def main(argv: list[str] | None = None) -> int:
 
     gates = {"min_h": args.min_h, "min_ent": args.min_ent, "min_energy": args.min_energy}
 
-    fraud_pdfs = sorted(args.corpus.glob("*.pdf"))
-    clean_dir = args.corpus / "clean"
-    clean_pdfs = sorted(clean_dir.glob("*.pdf")) if clean_dir.exists() else []
-
-    if not fraud_pdfs:
+    corpus_items = discover_corpus(args.corpus)
+    if not corpus_items:
         print(f"no PDFs found in {args.corpus}", file=sys.stderr)
         return 2
 
@@ -219,14 +244,15 @@ def main(argv: list[str] | None = None) -> int:
 
     all_records: list[dict] = []
     all_hit_pairs: list[tuple[str, str, float]] = []
-    for pdf in fraud_pdfs:
-        print(f"[fraud]   {pdf.name}")
-        recs, hp = extract_paper(pdf, "fraud", gates)
-        all_records.extend(recs)
-        all_hit_pairs.extend(hp)
-    for pdf in clean_pdfs:
-        print(f"[control] {pdf.name}")
-        recs, hp = extract_paper(pdf, "control", gates)
+    skipped: list[str] = []
+    for pdf, split in corpus_items:
+        print(f"[{split:9s}] {pdf.name}")
+        recs, hp = extract_paper(pdf, split, gates)
+        if not recs:
+            # Truncated downloads are common and must never be silent: a paper
+            # that yields no lanes would otherwise vanish from the stats and
+            # quietly deflate the corpus size.
+            skipped.append(pdf.name)
         all_records.extend(recs)
         all_hit_pairs.extend(hp)
 
@@ -255,7 +281,10 @@ def main(argv: list[str] | None = None) -> int:
             w.writerow(p)
 
     # Stats
-    stats = {"total_lanes": len(all_records), "pairs": len(pairs)}
+    stats = {"total_lanes": len(all_records), "pairs": len(pairs),
+             "papers_in_corpus": len(corpus_items),
+             "papers_with_lanes": len(corpus_items) - len(skipped),
+             "papers_skipped": sorted(skipped)}
     for key, val in (("class", "class"), ("split", "split")):
         counts: dict[str, int] = {}
         for r in all_records:
@@ -277,6 +306,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  stats   : {args.out / 'dataset_stats.json'}")
     print("  by class:", stats["by_class"])
     print("  by split:", stats["by_split"])
+    if skipped:
+        print(f"\n  WARNING: {len(skipped)}/{len(corpus_items)} paper(s) produced no "
+              f"lanes — usually a truncated download (a PDF can be the right size "
+              f"and still be cut short; check for the %%EOF marker) or a paper with "
+              f"no extractable figures:")
+        for name in skipped[:12]:
+            print(f"    - {name}")
+        if len(skipped) > 12:
+            print(f"    ... and {len(skipped) - 12} more (see dataset_stats.json)")
     return 0
 
 
