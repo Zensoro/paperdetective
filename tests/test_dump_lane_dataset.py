@@ -2,7 +2,7 @@
 import numpy as np
 import paperdetective.tools.dump_lane_dataset as d
 from paperdetective.tools.dump_lane_dataset import (
-    build_pairs, _lid, _dump_crop, _lane_content_ratio,
+    build_pairs, _lid, _dump_crop, _lane_content_ratio, discover_corpus,
 )
 
 PAPER = "10.1371_journal.pone.0071518"
@@ -73,3 +73,44 @@ def test_build_pairs_skips_when_too_few_clean():
     pairs = build_pairs(records, hit_pairs, neg_per_pos=3)
     assert len([p for p in pairs if p["label"] == 1]) == 1
     assert len([p for p in pairs if p["label"] == 0]) == 0
+
+
+def _touch(p):
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(b"%PDF-1.4\n")
+    return p
+
+
+def test_discover_corpus_top_level_is_fraud_and_clean_is_control(tmp_path):
+    """Backwards compatibility: bare PDFs = fraud, clean/ = control."""
+    _touch(tmp_path / "a.pdf")
+    _touch(tmp_path / "clean" / "ctrl.pdf")
+
+    got = {p.name: split for p, split in discover_corpus(tmp_path)}
+
+    assert got == {"a.pdf": "fraud", "ctrl.pdf": "control"}
+
+
+def test_discover_corpus_keeps_weak_labels_in_their_own_split(tmp_path):
+    """A retracted/ subdir must NOT be promoted to the gold-standard fraud split.
+
+    Papers retracted for image problems have no per-figure official finding, so
+    mixing them into `fraud` would silently inflate the strength of the labels.
+    """
+    _touch(tmp_path / "gold.pdf")
+    _touch(tmp_path / "retracted" / "weak1.pdf")
+    _touch(tmp_path / "retracted" / "weak2.pdf")
+    _touch(tmp_path / "clean" / "ctrl.pdf")
+
+    got = {p.name: split for p, split in discover_corpus(tmp_path)}
+
+    assert got["gold.pdf"] == "fraud"
+    assert got["weak1.pdf"] == "retracted"
+    assert got["weak2.pdf"] == "retracted"
+    assert got["ctrl.pdf"] == "control"
+    # exactly one paper carries the gold-standard label
+    assert sum(1 for s in got.values() if s == "fraud") == 1
+
+
+def test_discover_corpus_missing_dir_returns_empty(tmp_path):
+    assert discover_corpus(tmp_path / "nope") == []
