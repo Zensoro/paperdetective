@@ -6,7 +6,7 @@
 
 **Architecture:** Three-phase pipeline — Phase A (ingest/extract) → Phase B (six detection modules + three composite engines) → Phase C (evidence backtracking, confidence scoring, JSON validation, report generation). Detection modules are pure functions over extracted artifacts; composite engines (triangle-verify, confidence, arbitration) combine module outputs. Offline by default; network APIs (Crossref/OpenAlex) are optional plugins that degrade gracefully.
 
-**Tech Stack:** Python 3.10+, setuptools, pydantic (schemas), numpy/scipy (statistics), Pillow (images), pypdf (PDF), python-docx (Word), pytest (tests). OpenAI-compatible LLM client for NLI (optional, ARCHAGENT-style offline mock). Project root: `/Users/zen/WorkBuddy/2026-08-04-21-03-33/paperdetective` (repo `Zensoro/paperdetective`, SSH configured).
+**Tech Stack:** Python 3.10+, setuptools, pydantic (schemas), numpy/scipy (statistics), Pillow (images), pypdf (PDF), python-docx (Word), pytest (tests). OpenAI-compatible LLM client for NLI (optional, ARCHAGENT-style offline mock). Project root: 仓库根目录 `paperdetective/`（repo `Zensoro/paperdetective`）.
 
 ---
 
@@ -1552,7 +1552,7 @@ Expected: PASS (2 passed)
 - [ ] **Step 5: Manual smoke test**
 
 ```bash
-cd /Users/zen/WorkBuddy/2026-08-04-21-03-33/paperdetective
+cd "$(git rev-parse --show-toplevel)"
 echo "均值=1.33, n=2, 本论文声称实验数据" > /tmp/sample_paper.txt
 python -m paperdetective.cli analyze --input /tmp/sample_paper.txt --output /tmp/out.json
 cat /tmp/out.json | python -m json.tool | head -20
@@ -1672,7 +1672,7 @@ jobs:
 - [ ] **Step 6: Run full test suite**
 
 ```bash
-cd /Users/zen/WorkBuddy/2026-08-04-21-03-33/paperdetective
+cd "$(git rev-parse --show-toplevel)"
 pytest -v
 ```
 Expected: all tests pass (≥ 40 tests).
@@ -1689,7 +1689,7 @@ git commit -m "docs: README (EN/CN), CONTRIBUTING, SECURITY, CHANGELOG, CI, agen
 - [ ] **Step 1: Create remote repo**
 
 ```bash
-cd /Users/zen/WorkBuddy/2026-08-04-21-03-33/paperdetective
+cd "$(git rev-parse --show-toplevel)"
 ssh -T git@github.com 2>&1 | head -1   # expect "Hi Zensoro!"
 curl -s -o /dev/null -w "%{http_code}\n" https://api.github.com  # expect 200
 ```
