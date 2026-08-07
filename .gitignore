@@ -10,3 +10,6 @@ venv/
 *.key
 *.pem
 .DS_Store
+# auto-generated training datasets (thousands of PNGs) — reproduce via the tool
+data/
+*.csv.bak
