@@ -17,9 +17,32 @@ discussion — but the data has to be collected first).
 
 ```bash
 python -m paperdetective.tools.dump_lane_dataset \
-    --corpus /path/to/cases \     # fraud PDFs; a clean/ subdir = control papers
+    --corpus /path/to/cases \     # top-level PDFs = fraud; each subdir = its own split
     --out    data/lanes
 ```
+
+#### Corpus layout and label strength
+
+Every subdirectory of `--corpus` becomes its own `split`, which is how labels of
+different strength are kept apart. **Never flatten these into one split** — they
+are not equally trustworthy:
+
+```
+cases/
+  *.pdf            -> split=fraud      gold standard: an official body (ORI, an
+                                       institutional investigation, a sponsor
+                                       statement) named the manipulated figures
+  retracted/*.pdf  -> split=retracted  weak label: retracted for image problems,
+                                       but no per-figure finding was published
+  clean/*.pdf      -> split=control    negative control: must never produce a
+                                       duplicate (clean/ is aliased to control
+                                       for backwards compatibility)
+```
+
+`fraud` is the only split where a `duplicate` label can be checked against a
+published finding. `retracted` papers are *likely* to contain reuse, but the
+detector's output there is unverified — useful as training volume, never as
+ground truth for measuring precision.
 
 Gate parameters default to the `lane_reuse` module constants
 (`--min-h`, `--min-ent`, `--min-energy`); `--no-images` skips PNG crops and emits
@@ -44,7 +67,7 @@ data/lanes/
 | --- | --- |
 | `id` | `<paper>_<fig>_b<band>_l<lane>` (matches the PNG filename) |
 | `paper`, `figure`, `band`, `lane` | source location |
-| `split` | `fraud` or `control` — hold the control papers out as a test set |
+| `split` | `fraud` / `retracted` / `control` (or any subdir name) — hold `control` out as a test set; see label strength above |
 | `class` | `duplicate` / `clean_lane` / `rejected` |
 | `height`, `width` | lane geometry (px) |
 | `entropy` | 32-bin gray histogram entropy of the lane |
