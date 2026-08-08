@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from .ingest import Document
 from .schemas import AnalysisResult, Finding, EvidencePack, InternalReview
 from .detect.data_fabrication import grim_test, benford_analysis, p_curve_analysis
+from .detect.citation_fraud import check_doi_existence, scan_retraction_keywords, find_dois
 from .detect.image_manipulation import ela_score, detect_reuse
 from .detect.region_reuse import detect_panel_reuse
 from .detect.band_ela import band_ela_scan
@@ -57,7 +58,12 @@ def _mk_finding(findings: list[Finding], **kwargs) -> None:
     findings.append(Finding(id=f"FD-{len(findings)+1:03d}", **kwargs))
 
 
-def run_detection(docs: list[Document], pro: bool = False, license_key: str | None = None) -> AnalysisResult:
+def run_detection(
+    docs: list[Document],
+    pro: bool = False,
+    license_key: str | None = None,
+    _get=None,
+) -> AnalysisResult:
     findings: list[Finding] = []
     detectors_run: list[str] = []
 
@@ -84,6 +90,51 @@ def run_detection(docs: list[Document], pro: bool = False, license_key: str | No
                     confidence_score=confidence_score(evidence=["GRIM"]),
                 )
         detectors_run.append("GRIM")
+
+        # --- DOI 核查 (FREE, 联网尽力而为) ---
+        # 检查引文 DOI 是否真实存在。联网失败时降级为 None（不可验证），
+        # 不武断下结论；见 detect/citation_fraud.py。
+        if _get is not None or True:  # always run; network-safe by design
+            for doi in find_dois(doc.text):
+                exists = check_doi_existence(doi, _get=_get)
+                detectors_run.append("DOI_Check")
+                if exists is False:
+                    _mk_finding(
+                        findings,
+                        finding_type=["Citation_Fabrication"],
+                        title="引文 DOI 无法解析（疑似虚构引用）",
+                        description=(
+                            f"DOI {doi} 格式合法但在 doi.org 上解析失败，"
+                            "提示该引用可能不存在（也可能是 DOI 登记延迟或"
+                            "网络问题，需人工复核）。"
+                        ),
+                        severity="High",
+                        evidence_pack=[EvidencePack(
+                            type="Text", source_location=doc.paper_id,
+                            quote=doi, basis="原文")],
+                        detection_method="DOI_Check",
+                        confidence_score=confidence_score(evidence=["DOI_Check"]),
+                    )
+            # 撤稿关键词扫描（对论文元信息，无联网）
+            retraction_words = scan_retraction_keywords(
+                {"title": doc.paper_id, "type": ""})
+            if retraction_words:
+                detectors_run.append("Retraction_Check")
+                _mk_finding(
+                    findings,
+                    finding_type=["Retraction_Flag"],
+                    title="论文标题含撤稿/更正标记",
+                    description=(
+                        f"标题中出现撤稿相关关键词：{', '.join(retraction_words)}。"
+                        "可能已被撤稿或发布更正，需人工核实。"
+                    ),
+                    severity="Medium",
+                    evidence_pack=[EvidencePack(
+                        type="Text", source_location=doc.paper_id,
+                        quote=doc.paper_id, basis="原文")],
+                    detection_method="Retraction_Check",
+                    confidence_score=confidence_score(evidence=["Retraction_Check"]),
+                )
 
         # --- p-curve (FREE, soft signal) ---
         pvals = _find_p_values(doc.text)

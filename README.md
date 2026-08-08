@@ -22,8 +22,8 @@
 | 数据造假 | **GRIM**（均值×样本量整数一致性）、Benford 首位分布、p-curve | 硬证据 / 软信号 | 🆓 Free |
 | 图片操纵 | pHash 感知哈希（文内图复用）、ELA 错误水平分析、**RegionReuse** 面板级复用（多尺度网格）、**BandELA** 条带级错误水平分析、**LaneReuse** 泳道级重复（相关系数+像素差双重判据） | 硬证据 / 软信号 | 🆓 Free |
 | 跨论文重复 | 跨文档 pHash 比对、数据指纹 | 硬证据 | 🆓 Free |
-| 引用造假 | DOI 格式校验 + doi.org 存在性解析 | 硬证据 | 💎 PRO 扩展 |
-| 撤稿标记 | 撤稿关键词 / 元数据交叉核查（可插拔） | 硬证据 | 💎 PRO 扩展 |
+| 引用造假 | DOI 格式校验 + doi.org 存在性解析（联网尽力而为，失败降级） | 硬证据 | 🆓 Free |
+| 撤稿标记 | 撤稿关键词 / 元数据交叉核查 | 硬证据 | 🆓 Free |
 | 内文自悖 | 数值主张相对偏差比较（NLI 可插拔） | 软信号 | 🆓 Free |
 
 - **确定性算法**：所有结论基于确定性算法与规则提取，无模型自由推断，无幻觉风险
@@ -31,7 +31,7 @@
 - **分层置信度引擎**：硬证据 0.85+，软信号按 corroboration 分层，内部知识一律封顶 0.60
 - **严格 schema**：输出 Pydantic 校验的 JSON 报告，同时支持美化 Markdown 导出
 - **批量处理**：支持目录输入，单文件失败不影响整批
-- **离线可用**：Free 层全部本地运行；联网 PRO 能力由可选扩展 `paperdetective-pro` 提供
+- **离线可用**：全部检测本地运行；DOI 存在性核查为联网尽力而为（网络失败自动降级为"不可验证"，不误报）
 
 ## 🚀 安装
 
@@ -39,12 +39,10 @@
 pip install -e .                # 核心功能
 pip install -e ".[pdf,docx]"    # PDF / Word 支持
 pip install -e ".[dev]"         # 开发（pytest）
-pip install paperdetective-pro  # 付费扩展（解锁 --pro 联网检测）
 ```
 
-> 🔒 **开源/付费分仓**：本仓库（MIT）只含免费核心。联网检测（DOI 解析、撤稿交叉
-> 核查、NLI、批量、HTML/PDF 报告）在私有扩展 `paperdetective-pro` 中，通过
-> `paperdetective.pro` entry-point 按需加载；未安装时 `--pro` 优雅降级为免费模式。
+> 📖 **全部免费开源**：本项目（MIT）包含全部检测能力，包括 DOI 存在性核查与撤稿
+> 标记扫描（原 paperdetective-pro 联网能力已并入核心）。
 
 ## 📖 快速开始
 
@@ -55,8 +53,8 @@ paperdetective analyze --input paper.pdf
 # 批量分析整个目录，输出 Markdown 报告
 paperdetective analyze --input ./papers/ --markdown --output report.md
 
-# PRO 模式：启用联网 DOI 存在性校验
-paperdetective analyze --input paper.pdf --pro
+# DOI 存在性核查默认免费启用（联网尽力而为，失败自动降级）
+paperdetective analyze --input paper.pdf
 ```
 
 支持格式：`.txt` / `.pdf` / `.docx` / `.png` / `.jpg` / `.jpeg` / `.gif` / `.bmp`

@@ -43,11 +43,17 @@ def test_run_detection_invokes_pro_extension(monkeypatch):
             )
     monkeypatch.setattr("paperdetective.analyze.load_pro_extensions",
                         lambda: [FakeExt()])
+
+    class Resp200:
+        status = 200
+
+    # _get=Resp200 makes the free DOI checker treat the citation as
+    # resolvable, so only the pro extension's finding appears.
     doc = Document(paper_id="p1", text="10.1016/j.fake.2023.01.001")
-    result = run_detection([doc], pro=False)
+    result = run_detection([doc], pro=False, _get=lambda url, timeout=5: Resp200())
     assert not result.detected_findings
 
-    result = run_detection([doc], pro=True)
+    result = run_detection([doc], pro=True, _get=lambda url, timeout=5: Resp200())
     assert any(f.detection_method == "DOI_Check" for f in result.detected_findings)
     assert "DOI_Check" in result.analysis_metadata["detectors_run"]
     # IDs stay unique alongside free findings

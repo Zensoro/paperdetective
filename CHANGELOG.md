@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0
 ## [Unreleased]
 
 ### Added
+- **DOI 存在性核查与撤稿标记扫描免费并入核心**：原 paperdetective-pro 的联网检测
+  能力（DOI 解析 + 撤稿关键词扫描）降级开源为 Free 检测器。DOI 核查联网尽力而为，
+  网络失败自动降级为"不可验证"（不误报）；`--pro`/`--license` 参数保留向后兼容，
+  旧 pro 扩展仍可通过 `paperdetective.pro` entry-point 加载。
+
+### Added
 - **`paperdetective.tools.dump_lane_dataset`**：用确定性 LaneReuse 检测器作**高置信自动标注器**，把语料库每篇 PDF 的每个 western-blot 泳道切出并打标，导出可训练数据集。三类标签 `duplicate` / `clean_lane` / `rejected`，按 `fraud` / `control` 分 split（对照组留作测试集）；产出 `images/*.png` + `manifest.csv`（几何/熵/能量/最相关 corr 等特征）+ `pairs.csv`（真实重复对作正样本、同论文 clean↔clean 抽样作负样本，供孪生网络训练）。这是"为将来神经网络"铺路的第一步——在尚无 100+ 标注样本前，先让确定性算法自动攒数据。详见 `paperdetective/tools/README.md`。
 - **语料库多 split 布局 + 标签强度分层**：`--corpus` 下每个子目录自成一个 split，避免不同可信度的标签被拉平成同一档。顶层 PDF = `fraud`（金标准：ORI/机构调查/申办方声明**逐图认定**），`retracted/` = `retracted`（弱标签：因图像问题撤稿，但无逐图官方认定），`clean/` = `control`（负对照，`clean` 别名保持向后兼容）。只有 `fraud` 档的 `duplicate` 标签能对照已发表认定核验；`retracted` 档用于扩充训练量，**不可用作衡量精确率的真值**。
 - **数据集扩充管线**（Retraction Watch → 开放获取 PDF → dump）：以 Crossref Labs 免费托管的 Retraction Watch 撤稿库（7.1 万条）为标签源，按图像类撤稿原因码（`Duplication of/in Image` 等）筛出 1681 条图像类撤稿，交叉 PLoS ONE 开放获取得 459 篇候选，批量下载后并入 `retracted` split。
