@@ -96,5 +96,5 @@ def test_cli_markdown_output(tmp_path):
     rc = main(["analyze", "--input", str(f), "--markdown", "--output", str(out)])
     assert rc == 0
     md = out.read_text()
-    assert "PaperDetective 检测报告" in md
+    assert "PaperDetective 筛查报告" in md
     assert "免责声明" in md

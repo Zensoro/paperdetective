@@ -308,8 +308,8 @@ def run_detection(docs: list[Document], pro: bool = False, license_key: str | No
         },
         detected_findings=findings,
         internal_review=InternalReview(
-            no_findings_reason=None if findings else "未发现六类造假信号。",
-            hallucination_check="所有结论基于确定性算法(GRIM/Benford/p-curve/pHash/ELA)与规则提取，无模型自由推断。",
+            no_findings_reason=None if findings else "未发现显著异常信号。",
+            hallucination_check="所有信号基于确定性算法(GRIM/Benford/p-curve/pHash/ELA)与规则提取，无模型自由推断。",
             missing_info=(
                 "联网检测（DOI/撤稿核查）、NLI、批量扫描、PDF 报告为 Pro 扩展（paperdetective-pro），"
                 "当前未安装；"
