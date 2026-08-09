@@ -96,14 +96,14 @@ paperdetective/
 ├── analyze.py           # 检测管线编排
 ├── report.py            # Markdown 报告渲染
 ├── schemas.py           # Pydantic 报告 schema
-├── plugins.py           # Pro 扩展加载（entry-point）
+├── plugins.py           # 扩展加载（entry-point，向后兼容）
 ├── eval.py              # gold 标注评估（precision/recall/F1）
 ├── detect/              # 数据造假 · 图片操纵 · 内文自悖 · 跨论文重复
 └── engine/              # 置信度引擎 · 仲裁 · 三角验证
 ```
 
-Pro 扩展独立于本仓库：`paperdetective-pro`（私有/付费），含 DOI 解析、撤稿核查、
-NLI、批量扫描、报告导出，注册 `paperdetective.pro` entry-point 后自动接入管线。
+原付费扩展 `paperdetective-pro` 已归档，其 DOI 核查与撤稿扫描能力已并入
+本仓库免费核心。旧扩展仍可通过 `paperdetective.pro` entry-point 加载（向后兼容）。
 
 ## ✅ 测试
 
@@ -139,14 +139,26 @@ python -m pytest        # 111 项测试
 - [x] BandELA 条带级错误水平分析
 - [x] LaneReuse 泳道级重复检测（相关系数 + 像素差 + 聚类聚合 + 对照组验证）
 - [ ] SPRITE 完整实现接入管线
-- [ ] Pro 扩展：撤稿数据库（Retraction Watch / Crossref）交叉核查
-- [ ] Pro 扩展：NLI 内文自悖（LLM 可插拔）
-- [ ] Pro 扩展：HTML / PDF 报告导出
+- [x] 撤稿标记扫描（已并入免费核心）
+- [ ] 撤稿数据库（Retraction Watch / Crossref）交叉核查
+- [ ] NLI 内文自悖（LLM 可插拔）
+- [ ] HTML / PDF 报告导出
 - [ ] Web 界面
+
+## 🤖 Development & AI disclosure
+
+本项目为 **AI 重度辅助开发**：AI 助手参与了代码生成、测试编写、文档、重构与
+代码审查（提交历史中可见 "Kimi 审查后修复" 等记录）。具体承诺：
+
+- **核心算法与阈值经人工复核**：GRIM/SPRITE/Benford/pHash/ELA/LaneReuse 等
+  检测逻辑与参数取值均有源码级人工审查，非模型自动断言。
+- **评测结论自证局限已披露**：8 案例命中、对照组误报等结论目前均来自作者
+  自测管线，尚无第三方独立复现；对照组样本量（3 篇）不具统计功效，"零误报"
+  表述应理解为"当前自测未发现"，而非统计学意义上的保证。
+- **对打假工具的公信力承诺**：若您发现任何夸大或不实的表述，请开 issue 指正
+  ——准确性优先于宣传。
 
 ## 📄 License
 
-MIT — 本仓库（免费核心）见 [LICENSE](LICENSE)。
-
-联网付费能力（DOI 解析、撤稿核查、NLI、批量、报告导出）属于私有扩展
-`paperdetective-pro`，采用专有许可证，不随本仓库分发。
+MIT — 见 [LICENSE](LICENSE)。全部检测能力（含 DOI 核查与撤稿扫描）
+均为免费开源。
