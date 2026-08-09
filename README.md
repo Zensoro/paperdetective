@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-111%20passed-brightgreen)](#-测试)
+[![Tests](https://img.shields.io/badge/tests-137%20passed-brightgreen)](#-测试)
 
 > ⚖️ **免责声明**
 >
@@ -32,7 +32,7 @@
 
 - **确定性算法**：所有结论基于确定性算法与规则提取，无模型自由推断，无幻觉风险
 - **案例驱动开发**：检测器由官方认定的真实造假案例（ORI / Rice 调查 / Pfizer 声明）驱动迭代，[8 案例验证矩阵](docs/case-studies/corpus-2026-08.md) 报告在官方认定位置上的命中情况；**独立对照组**（3 篇无 WB 图稿的方法学/综述论文，从未参与调参）报告误报。注意：案例与对照组均来自作者自测，尚未经第三方独立复现，详见 [AI disclosure](#-development--ai-disclosure)。
-- **分层置信度引擎**：硬证据 0.85+，软信号按 corroboration 分层，内部知识一律封顶 0.60
+- **分层置信度引擎**：硬证据 0.85+，软信号按 corroboration 分层，内部知识一律封顶 0.60；同一图片上多检测器独立命中（如 LaneReuse + BandELA）自动互相印证并升级置信度
 - **严格 schema**：输出 Pydantic 校验的 JSON 报告，同时支持美化 Markdown 导出
 - **批量处理**：支持目录输入，单文件失败不影响整批
 - **离线可用**：全部检测本地运行；DOI 存在性核查为联网尽力而为（网络失败自动降级为"不可验证"，不误报）
