@@ -15,7 +15,7 @@ from .detect.lane_reuse import cluster_lane_hits, detect_lane_reuse
 from .detect.internal_inconsistency import extract_numbers
 from .detect.cross_paper import find_cross_paper_duplicates
 from .plugins import load_pro_extensions, ProContext
-from .engine.confidence import confidence_score
+from .engine.confidence import SOFT_SIGNAL, confidence_score
 
 # 中英文均值声明: "均值=12.3, n=40" / "mean = 1.33, n = 30" / "M=2.66 (n=12)"
 MEAN_N_RE = re.compile(
@@ -54,8 +54,48 @@ def _find_p_values(text: str) -> list[float]:
     return pvals
 
 
-def _mk_finding(findings: list[Finding], **kwargs) -> None:
-    findings.append(Finding(id=f"FD-{len(findings)+1:03d}", **kwargs))
+def _mk_finding(findings: list[Finding], figures: set[str] | None = None,
+                figure_hits: dict[str, list[Finding]] | None = None, **kwargs) -> Finding:
+    f = Finding(id=f"FD-{len(findings)+1:03d}", **kwargs)
+    findings.append(f)
+    if figures and figure_hits is not None:
+        for fig in figures:
+            figure_hits.setdefault(fig, []).append(f)
+    return f
+
+
+def _extract_figure_ids(*figures: str | None) -> set[str]:
+    """Normalize figure keys referenced by image detectors into a comparable set.
+
+    Detectors report locations as figure ids (e.g. "page3_Im4.jpg", "fig2").
+    Convergent findings on the SAME figure strengthen each other; we only need
+    an exact-key match, so no fuzzy normalization is applied.
+    """
+    return {f for f in figures if f}
+
+
+def _apply_corroboration(findings: list[Finding],
+                         figure_hits: dict[str, list[Finding]]) -> None:
+    """Mark convergent evidence: multiple detectors hitting the SAME figure.
+
+    In-place. For every figure with >=2 distinct detection methods:
+      - cross-reference all findings on that figure
+      - bump soft signals (ELA/BandELA) corroborated by hard evidence to 0.70
+    Deterministic, no model inference: corroboration is purely positional.
+    """
+    for fig, fs in figure_hits.items():
+        methods = {f.detection_method for f in fs}
+        if len(methods) < 2:
+            continue
+        for f in fs:
+            others = [g for g in fs if g is not f]
+            if others:
+                f.cross_references = [
+                    {"figure": fig, "finding_id": g.id, "method": g.detection_method}
+                    for g in others
+                ]
+            if f.detection_method in SOFT_SIGNAL and f.confidence_score < 0.70:
+                f.confidence_score = 0.70
 
 
 def run_detection(
@@ -66,6 +106,7 @@ def run_detection(
 ) -> AnalysisResult:
     findings: list[Finding] = []
     detectors_run: list[str] = []
+    figure_hits: dict[str, list[Finding]] = {}
 
     for doc in docs:
         # --- GRIM (FREE, hard evidence) ---
@@ -186,6 +227,7 @@ def run_detection(
             for a, b in detect_reuse(dict(doc.images)):
                 _mk_finding(
                     findings,
+                    figures=_extract_figure_ids(a, b), figure_hits=figure_hits,
                     finding_type=["Image_Manipulation"],
                     title="文内图片高度相似（疑似复用/拼接）",
                     description=f"图片 {a} 与 {b} 的感知哈希几乎一致，提示同一张图可能被重复用于不同结果。",
@@ -205,6 +247,8 @@ def run_detection(
             for hit in detect_panel_reuse(dict(doc.images)):
                 _mk_finding(
                     findings,
+                    figures=_extract_figure_ids(hit["figure_a"], hit["figure_b"]),
+                    figure_hits=figure_hits,
                     finding_type=["Image_Manipulation"],
                     title="子图面板高度相似（疑似面板级复用/拼接）",
                     description=(
@@ -229,6 +273,7 @@ def run_detection(
                 if ela["violated"]:
                     _mk_finding(
                         findings,
+                        figures=_extract_figure_ids(img_id), figure_hits=figure_hits,
                         finding_type=["Image_Manipulation"],
                         title="图片错误水平分析（ELA）异常",
                         description=(
@@ -254,6 +299,7 @@ def run_detection(
                 for lane in scan["flagged"]:
                     _mk_finding(
                         findings,
+                        figures=_extract_figure_ids(img_id), figure_hits=figure_hits,
                         finding_type=["Image_Manipulation"],
                         title="条带级 ELA 异常（疑似局部拼接/编辑）",
                         description=(
@@ -301,6 +347,8 @@ def run_detection(
                     )
                 _mk_finding(
                     findings,
+                    figures=_extract_figure_ids(p["figure_a"], p["figure_b"]),
+                    figure_hits=figure_hits,
                     finding_type=["Image_Manipulation"],
                     title=title,
                     description=(
@@ -312,7 +360,11 @@ def run_detection(
                         type="Visual", source_location=doc.paper_id,
                         quote=f"cluster=({cl['n_members']} lanes/{cl['n_pairs']} pairs), "
                               f"corr={p['correlation']}, diff={p['pixel_diff']}",
-                        basis="原文")],
+                        basis="原文",
+                        extra={"figure_a": p["figure_a"], "figure_b": p["figure_b"],
+                               "band_a": p["band_a"], "lane_a": p["lane_a"],
+                               "band_b": p["band_b"], "lane_b": p["lane_b"],
+                               "box_a": list(p["box_a"]), "box_b": list(p["box_b"])})],
                     detection_method="LaneReuse",
                     confidence_score=confidence_score(evidence=["LaneReuse"]),
                 )
@@ -344,6 +396,11 @@ def run_detection(
                 detection_method="pHash",
                 confidence_score=confidence_score(evidence=["pHash"]),
             )
+
+    # --- 多检测器收敛 (FREE) ---
+    # 同一张图上多个独立检测器命中时互相印证：软信号（ELA/BandELA）被硬证据
+    # 佐证则置信度升至 0.70，并在 finding 间建立 cross_references。
+    _apply_corroboration(findings, figure_hits)
 
     return AnalysisResult(
         analysis_metadata={
