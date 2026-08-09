@@ -27,7 +27,7 @@
 | 内文自悖 | 数值主张相对偏差比较（NLI 可插拔） | 软信号 | 🆓 Free |
 
 - **确定性算法**：所有结论基于确定性算法与规则提取，无模型自由推断，无幻觉风险
-- **案例驱动开发**：检测器由官方认定的真实造假案例（ORI / Rice 调查 / Pfizer 声明）驱动迭代，[8 案例验证矩阵](docs/case-studies/corpus-2026-08.md) 保证高置信命中对应官方认定位置；**独立对照组**（无 WB 图稿的方法学/综述论文，从未参与调参）验证误报率
+- **案例驱动开发**：检测器由官方认定的真实造假案例（ORI / Rice 调查 / Pfizer 声明）驱动迭代，[8 案例验证矩阵](docs/case-studies/corpus-2026-08.md) 报告在官方认定位置上的命中情况；**独立对照组**（3 篇无 WB 图稿的方法学/综述论文，从未参与调参）报告误报。注意：案例与对照组均来自作者自测，尚未经第三方独立复现，详见 [AI disclosure](#-development--ai-disclosure)。
 - **分层置信度引擎**：硬证据 0.85+，软信号按 corroboration 分层，内部知识一律封顶 0.60
 - **严格 schema**：输出 Pydantic 校验的 JSON 报告，同时支持美化 Markdown 导出
 - **批量处理**：支持目录输入，单文件失败不影响整批
@@ -128,7 +128,7 @@ python -m pytest        # 111 项测试
 
 **LaneReuse 8/8 命中**——包括 RegionReuse 漏检的 miR-221 案例：Pfizer 声明认定的
 "duplicated bands inside western blots"（Figure 6 泳道三连重复）被泳道级比对直接抓到。
-对照组（3 篇无 WB 图稿的方法学/综述论文，独立于调参）LaneReuse 零误报。
+对照组（3 篇无 WB 图稿的方法学/综述论文，独立于调参）LaneReuse 未发现误报（样本量小，不具统计功效）。
 
 → 完整矩阵与命中/漏检分析见 [docs/case-studies/corpus-2026-08.md](docs/case-studies/corpus-2026-08.md)
 
