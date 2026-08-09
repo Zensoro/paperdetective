@@ -1,5 +1,9 @@
 # 🔍 PaperDetective
 
+[![Status: experimental](https://img.shields.io/badge/status-experimental-orange.svg)](https://github.com/Zensoro)
+
+> ⚠️ **Experimental** — 实验性项目，功能可能不稳定或演进中。
+
 **论文内容级学术打假检测器** — 对论文进行数据造假、图片操纵、引用造假、撤稿标记、内文自悖、跨论文重复六类信号筛查，输出严格的结构化报告。
 
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.10-blue)](https://www.python.org)
