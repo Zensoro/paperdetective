@@ -36,10 +36,10 @@
 pip install -e .                # core
 pip install -e ".[pdf,docx]"    # PDF / Word support
 pip install -e ".[dev]"         # development (pytest)
-pip install paperdetective-pro  # paid extension (unlocks --pro networked checks)
+# All capabilities (incl. DOI check & retraction scan) are free and open source
 ```
 
-> 🔒 **Open-core / paid split**: this repo (MIT) ships the free core. Networked checks (DOI resolution, retraction cross-check, NLI, batch, HTML/PDF export) live in the private extension `paperdetective-pro`, loaded via the `paperdetective.pro` entry-point; if not installed, `--pro` gracefully degrades to free mode.
+> 📖 **Fully free & open source**: all capabilities (including DOI existence check and retraction scanning) are MIT-licensed and shipped in this repo.
 
 ## 📖 Quick start
 
@@ -91,13 +91,13 @@ paperdetective/
 ├── analyze.py           # pipeline orchestration
 ├── report.py            # Markdown renderer
 ├── schemas.py           # Pydantic report schema
-├── plugins.py           # Pro extension loader (entry-point)
+├── plugins.py           # Extension loader (entry-point, backward compat)
 ├── eval.py              # gold-annotation evaluation (precision/recall/F1)
 ├── detect/              # data fabrication · image manipulation · internal inconsistency · cross-paper
 └── engine/              # confidence · arbitration · triangle verification
 ```
 
-Pro extensions live in their own repo (`paperdetective-pro`, private/paid). Once registered via the `paperdetective.pro` entry-point, they auto-plug into the pipeline.
+The former paid extension `paperdetective-pro` is archived; its DOI check and retraction scan are merged into this free core. Old extensions still load via the `paperdetective.pro` entry-point (backward compatible).
 
 ## ✅ Tests
 
@@ -146,11 +146,25 @@ See [docs/case-studies/her3-brand-2013.md](docs/case-studies/her3-brand-2013.md)
 - [ ] PRO: HTML / PDF report export
 - [ ] Web UI
 
+## 🤖 Development & AI disclosure
+
+This project is developed with **heavy AI assistance** (code generation, tests,
+docs, refactoring, code review — commit history includes "Kimi review fixes").
+Commitments:
+
+- **Core algorithms & thresholds are human-reviewed** (GRIM/SPRITE/Benford/
+  pHash/ELA/LaneReuse logic and parameter values), not machine-asserted.
+- **Self-evaluation limits are disclosed**: the 8-case hits, control-group
+  errors etc. come from the author's own pipeline with no independent
+  reproduction yet; the 3-paper control group lacks statistical power, so
+  "zero false positives" means "none found in self-testing", not a statistical
+  guarantee.
+- **Public-trust commitment**: if you find any overstated claim, please open an
+  issue — accuracy over hype.
+
 ## 📄 License
 
-MIT for this repo (free core) — see [LICENSE](LICENSE).
-
-Networked paid capabilities (DOI resolution, retraction cross-check, NLI, batch, report export) live in the private extension `paperdetective-pro` under a proprietary license and are NOT redistributed with this repo.
+MIT — see [LICENSE](LICENSE). All detection capabilities (including DOI check and retraction scan) are free and open source.
 
 ## 📚 Citation / Press
 
